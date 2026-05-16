@@ -1,0 +1,21 @@
+{
+  "name": "AGS KPSS Akıllı Planlayıcı",
+  "short_name": "AGS Plan",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background-color": "#F2F2F7",
+  "theme-color": "#007AFF",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://via.placeholder.com/192/007AFF/FFFFFF?text=AGS",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://via.placeholder.com/512/007AFF/FFFFFF?text=AGS",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
