@@ -168,7 +168,7 @@
     </div>
 
     <script>
-        // --- 1. FIREBASE CONFIG AYARLARI (GİRİLEN GERÇEK VERİLER) ---
+        // --- FIREBASE CONFIG (GİRİLEN BİLGİLER) ---
         const firebaseConfig = {
             apiKey: "AIzaSyADpIRNLQEIer_gplTgwKi_EKkfcyrYoqY",
             authDomain: "maasgunu-bd353.firebaseapp.com",
@@ -179,11 +179,11 @@
             measurementId: "G-GQT1Q7FGDM"
         };
         
-        // Firebase Başlatma
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         let unsubscribe = null; 
-        // --------------------------------------------------------------------------
+
+        const APP_VERSION = "1.2"; // Versiyon Güncellemesi (Eski veriyi temizlemek için)
 
         const ALL_TOPICS = [
             { id: 1, category: "AGS Sözel Yetenek", title: "Sözcükte Anlam", duration: "30 dk", questions: "20 Soru" },
@@ -227,7 +227,7 @@
             { id: 39, category: "Eğitimin Temelleri", title: "Türkiye Yüzyılı Maarif Modeli Yapısı", duration: "45 dk", questions: "20 Soru" },
             { id: 40, category: "Eğitimin Temelleri", title: "Eğitim ve Öğretimde Etik İlkeler", duration: "25 dk", questions: "10 Soru" },
             { id: 41, category: "Eğitimin Temelleri", title: "Eğitim ve Öğretim Teknolojileri", duration: "30 dk", questions: "15 Soru" },
-            { id: 42, category: "Eğitimin Temelleri", title: "Öğrenmeyi Etkileyen Faktörler & Klasik Koşullanma", duration: "35 dk", questions: "15 Soru" },
+            { id: 42, category: "Eğitimin Temelleri", title: "Öğrenmeyi Etkileyen Faktörler", duration: "35 dk", questions: "15 Soru" },
             { id: 43, category: "Eğitimin Temelleri", title: "Piaget'nin Bilişsel Gelişim Kuramı", duration: "40 dk", questions: "20 Soru" },
             { id: 44, category: "Eğitimin Temelleri", title: "Öğrenme Kuramları ve Değerlendirme", duration: "45 dk", questions: "20 Soru" },
             { id: 45, category: "Eğitimin Temelleri", title: "Rehberlik & Gelişim Psikolojisi Giriş", duration: "40 dk", questions: "15 Soru" },
@@ -247,15 +247,29 @@
             { id: 59, category: "Okul Öncesi ÖABT", title: "Alan Eğitimi: Erken Okuryazarlık Eğitimi", duration: "40 dk", questions: "20 Soru" }
         ];
 
-        const TARGET_DATE = new Date("2026-07-12T00:00:00");
+        const TARGET_DATE = new Date(2026, 6, 12); // 12 Temmuz 2026
         let appSchedule = {};
         let completedTaskIds = [];
         let jointCode = localStorage.getItem("ags_joint_code") || "EV-CZD26";
+
+        // YEREL SAAT DÜZELTMESİ (UTC Hatasını Önlemek İçin)
+        function toLocalDateString(dateObj) {
+            const year = dateObj.getFullYear();
+            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
 
         document.addEventListener("DOMContentLoaded", () => {
             initCountdown();
             document.getElementById("joint-code-field").value = jointCode;
             
+            // Eski hatalı sürümü temizleme
+            if(localStorage.getItem("ags_version") !== APP_VERSION) {
+                localStorage.removeItem("ags_schedule");
+                localStorage.setItem("ags_version", APP_VERSION);
+            }
+
             const savedSchedule = localStorage.getItem("ags_schedule");
             if (savedSchedule) {
                 appSchedule = JSON.parse(savedSchedule);
@@ -295,7 +309,6 @@
             } else {
                 completedTaskIds.push(id);
             }
-            
             db.collection("ags_tracker").doc(jointCode).update({ completed: completedTaskIds });
             refreshUI();
         }
@@ -325,11 +338,11 @@
         }
 
         function generateInitialSchedule() {
-            let startDate = new Date("2026-05-17"); // Planlama bugünden (17 Mayıs) itibaren başlayacak
+            let startDate = new Date(); // Planlama bugünün YEREL saatinden itibaren başlayacak
             let tempTopics = [...ALL_TOPICS];
             let dayCounter = 0;
             while(tempTopics.length > 0) {
-                let currentDateStr = startDate.toISOString().split('T')[0];
+                let currentDateStr = toLocalDateString(startDate);
                 appSchedule[currentDateStr] = [];
                 let pullCount = (dayCounter % 3 === 0 && tempTopics.length > 1) ? 2 : 1;
                 for(let i=0; i<pullCount; i++) {
@@ -341,14 +354,8 @@
             localStorage.setItem("ags_schedule", JSON.stringify(appSchedule));
         }
 
-        function getTodayDateStr() {
-            let d = new Date();
-            if (d.getFullYear() !== 2026) return "2026-05-17"; 
-            return d.toISOString().split('T')[0];
-        }
-
         function renderTodayTasks() {
-            const todayStr = getTodayDateStr();
+            const todayStr = toLocalDateString(new Date());
             const todayList = document.getElementById("today-tasks-list");
             const completedList = document.getElementById("completed-tasks-list");
             todayList.innerHTML = ""; completedList.innerHTML = "";
@@ -401,7 +408,7 @@
         }
 
         function triggerReschedule() {
-            const todayStr = getTodayDateStr();
+            const todayStr = toLocalDateString(new Date());
             let uncompletedRefs = [];
             Object.keys(appSchedule).forEach(dateStr => {
                 if(dateStr <= todayStr) {
@@ -412,10 +419,10 @@
                 }
             });
 
-            let tomorrow = new Date(todayStr);
+            let tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             while(uncompletedRefs.length > 0) {
-                let futureDateStr = tomorrow.toISOString().split('T')[0];
+                let futureDateStr = toLocalDateString(tomorrow);
                 if(!appSchedule[futureDateStr]) appSchedule[futureDateStr] = [];
                 appSchedule[futureDateStr].push(uncompletedRefs.shift());
                 tomorrow.setDate(tomorrow.getDate() + 1);
@@ -454,15 +461,17 @@
             for(let i = 1; i < firstDayIndex; i++) grid.insertAdjacentHTML('beforeend', `<div class="calendar-day-cell"></div>`);
 
             const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const todayStr = toLocalDateString(new Date());
+
             for(let day = 1; day <= daysInMonth; day++) {
-                let currentStr = `2026-05-${day.toString().padStart(2, '0')}`;
+                let currentStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 let tasks = appSchedule[currentStr] || [];
                 let dotClass = "";
                 if(tasks.length > 0) {
                     let allDone = tasks.every(ref => completedTaskIds.includes(ref.id));
                     dotClass = allDone ? "dot-green" : "dot-orange";
                 }
-                let isToday = (day === 17);
+                let isToday = (currentStr === todayStr);
                 grid.insertAdjacentHTML('beforeend', `
                     <div class="calendar-day-cell ${isToday ? 'selected' : ''}" onclick="showDayDetails('${currentStr}', this)">
                         ${day} ${dotClass ? `<div class="calendar-dot ${dotClass}"></div>` : ''}
@@ -498,7 +507,7 @@
             const msgBox = document.getElementById("ai-motivation-text");
             const pct = Math.round((completedTaskIds.length / ALL_TOPICS.length) * 100);
             if(pct === 0) msgBox.innerText = "Yolculuk ilk adımla başlar! Bugünün konularını tamamlayarak harika bir başlangıç yapabilirsin.";
-            else msgBox.innerText = `Harika! Müfredatın %${pct}'ini tamamladın. Disipline devam!`;
+            else msgBox.innerText = `Harika! Müfredatın %${pct}'ini tamamladın. Eş zamanlı takip aktif, disipline devam!`;
         }
 
         function switchTab(tabId, title) {
