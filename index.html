@@ -11,6 +11,9 @@
     <meta name="apple-mobile-web-app-title" content="AGS Plan">
     <link rel="apple-touch-icon" href="https://via.placeholder.com/192/007AFF/FFFFFF?text=AGS">
     
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
     <style>
         :root {
             --ios-blue: #007AFF;
@@ -23,390 +26,59 @@
             --ios-text-sec: #8E8E93;
             --ios-border: #E5E5EA;
         }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            background-color: var(--ios-gray-bg);
-            color: var(--ios-text-main);
-            display: flex;
-            justify-content: center;
-            min-height: 100vh;
-        }
-
-        .app-container {
-            width: 100%;
-            max-width: 430px;
-            background-color: var(--ios-gray-bg);
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            min-height: 100vh;
-            padding-bottom: 85px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.05);
-        }
-
-        header {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            padding: 20px 16px 12px 16px;
-            border-bottom: 0.5px solid var(--ios-border);
-        }
-
-        header h1 {
-            font-size: 24px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-        }
-
-        .countdown-widget {
-            background: linear-gradient(135deg, #1D2A44, #0F172A);
-            color: white;
-            border-radius: 16px;
-            padding: 16px;
-            margin: 12px 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-
-        .countdown-title {
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #94A3B8;
-            margin-bottom: 4px;
-        }
-
-        .countdown-days {
-            font-size: 32px;
-            font-weight: 800;
-        }
-
-        .ai-box {
-            background-color: #E3F2FD;
-            border-left: 4px solid var(--ios-blue);
-            border-radius: 12px;
-            padding: 14px;
-            margin: 0 16px 16px 16px;
-        }
-
-        .ai-title {
-            font-size: 13px;
-            font-weight: 600;
-            color: #0D47A1;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-bottom: 4px;
-        }
-
-        .ai-text {
-            font-size: 13px;
-            color: #1565C0;
-            line-height: 1.4;
-        }
-
-        .view {
-            display: none;
-            padding: 0 16px;
-        }
-
-        .view.active {
-            display: block;
-        }
-
-        .section-title {
-            font-size: 18px;
-            font-weight: 700;
-            margin: 16px 0 8px 0;
-            color: #1C1C1E;
-        }
-
-        .task-card {
-            background-color: var(--ios-card-bg);
-            border-radius: 14px;
-            padding: 16px;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-            transition: transform 0.2s, opacity 0.2s;
-        }
-
-        .task-card.completed {
-            opacity: 0.6;
-        }
-
-        .checkbox-container {
-            position: relative;
-            cursor: pointer;
-            display: block;
-            margin-top: 2px;
-        }
-
-        .checkbox-container input {
-            position: absolute;
-            opacity: 0;
-            cursor: pointer;
-            height: 0;
-            width: 0;
-        }
-
-        .checkmark {
-            height: 22px;
-            width: 22px;
-            background-color: #FFF;
-            border: 2px solid var(--ios-border);
-            border-radius: 50%;
-            display: inline-block;
-            position: relative;
-            transition: all 0.2s;
-        }
-
-        .checkbox-container input:checked ~ .checkmark {
-            background-color: var(--ios-blue);
-            border-color: var(--ios-blue);
-        }
-
-        .checkmark:after {
-            content: "";
-            position: absolute;
-            display: none;
-            left: 7px;
-            top: 3px;
-            width: 5px;
-            height: 10px;
-            border: solid white;
-            border-width: 0 2px 2px 0;
-            transform: rotate(45deg);
-        }
-
-        .checkbox-container input:checked ~ .checkmark:after {
-            display: block;
-        }
-
-        .task-details {
-            flex-grow: 1;
-        }
-
-        .task-category {
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--ios-blue);
-            text-transform: uppercase;
-            margin-bottom: 2px;
-        }
-
-        .task-title {
-            font-size: 15px;
-            font-weight: 600;
-            color: var(--ios-text-main);
-            line-height: 1.3;
-        }
-
-        .task-meta {
-            font-size: 12px;
-            color: var(--ios-text-sec);
-            margin-top: 4px;
-            display: flex;
-            gap: 12px;
-        }
-
-        .telafi-banner {
-            background-color: #FFF3E0;
-            border-radius: 14px;
-            padding: 14px;
-            margin-bottom: 16px;
-            border: 1px solid #FFE0B2;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .telafi-text {
-            font-size: 13px;
-            color: #E65100;
-            font-weight: 500;
-        }
-
-        .btn-telafi {
-            background-color: var(--ios-orange);
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 13px;
-            cursor: pointer;
-            align-self: flex-start;
-        }
-
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 8px;
-            background-color: var(--ios-card-bg);
-            border-radius: 14px;
-            padding: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-        }
-
-        .calendar-header-cell {
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--ios-text-sec);
-            text-align: center;
-            padding-bottom: 8px;
-        }
-
-        .calendar-day-cell {
-            aspect-ratio: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            font-weight: 500;
-            border-radius: 50%;
-            position: relative;
-            cursor: pointer;
-        }
-
-        .calendar-day-cell.selected {
-            background-color: var(--ios-blue);
-            color: white !important;
-        }
-
-        .calendar-dot {
-            height: 4px;
-            width: 4px;
-            border-radius: 50%;
-            position: absolute;
-            bottom: 4px;
-        }
-
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--ios-gray-bg); color: var(--ios-text-main); display: flex; justify-content: center; min-height: 100vh; }
+        .app-container { width: 100%; max-width: 430px; background-color: var(--ios-gray-bg); display: flex; flex-direction: column; position: relative; min-height: 100vh; padding-bottom: 85px; box-shadow: 0 0 20px rgba(0,0,0,0.05); }
+        header { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); position: sticky; top: 0; z-index: 100; padding: 20px 16px 12px 16px; border-bottom: 0.5px solid var(--ios-border); display: flex; justify-content: space-between; align-items: center;}
+        header h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; }
+        .sync-status { font-size: 10px; font-weight: 600; padding: 4px 8px; border-radius: 12px; background: #E5E5EA; color: #8E8E93; }
+        .sync-status.online { background: #E8F5E9; color: #2E7D32; }
+        .countdown-widget { background: linear-gradient(135deg, #1D2A44, #0F172A); color: white; border-radius: 16px; padding: 16px; margin: 12px 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .countdown-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #94A3B8; margin-bottom: 4px; }
+        .countdown-days { font-size: 32px; font-weight: 800; }
+        .ai-box { background-color: #E3F2FD; border-left: 4px solid var(--ios-blue); border-radius: 12px; padding: 14px; margin: 0 16px 16px 16px; }
+        .ai-title { font-size: 13px; font-weight: 600; color: #0D47A1; margin-bottom: 4px; }
+        .ai-text { font-size: 13px; color: #1565C0; line-height: 1.4; }
+        .view { display: none; padding: 0 16px; }
+        .view.active { display: block; }
+        .section-title { font-size: 18px; font-weight: 700; margin: 16px 0 8px 0; color: #1C1C1E; }
+        .task-card { background-color: var(--ios-card-bg); border-radius: 14px; padding: 16px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: transform 0.2s, opacity 0.2s; }
+        .task-card.completed { opacity: 0.6; }
+        .checkbox-container { position: relative; cursor: pointer; display: block; margin-top: 2px; }
+        .checkbox-container input { position: absolute; opacity: 0; cursor: pointer; height: 0; width: 0; }
+        .checkmark { height: 22px; width: 22px; background-color: #FFF; border: 2px solid var(--ios-border); border-radius: 50%; display: inline-block; position: relative; transition: all 0.2s; }
+        .checkbox-container input:checked ~ .checkmark { background-color: var(--ios-blue); border-color: var(--ios-blue); }
+        .checkmark:after { content: ""; position: absolute; display: none; left: 7px; top: 3px; width: 5px; height: 10px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+        .checkbox-container input:checked ~ .checkmark:after { display: block; }
+        .task-details { flex-grow: 1; }
+        .task-category { font-size: 11px; font-weight: 600; color: var(--ios-blue); text-transform: uppercase; margin-bottom: 2px; }
+        .task-title { font-size: 15px; font-weight: 600; color: var(--ios-text-main); line-height: 1.3; }
+        .task-meta { font-size: 12px; color: var(--ios-text-sec); margin-top: 4px; display: flex; gap: 12px; }
+        .telafi-banner { background-color: #FFF3E0; border-radius: 14px; padding: 14px; margin-bottom: 16px; border: 1px solid #FFE0B2; display: flex; flex-direction: column; gap: 8px; }
+        .telafi-text { font-size: 13px; color: #E65100; font-weight: 500; }
+        .btn-telafi { background-color: var(--ios-orange); color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; align-self: flex-start; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; background-color: var(--ios-card-bg); border-radius: 14px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+        .calendar-header-cell { font-size: 11px; font-weight: 600; color: var(--ios-text-sec); text-align: center; padding-bottom: 8px; }
+        .calendar-day-cell { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 14px; font-weight: 500; border-radius: 50%; position: relative; cursor: pointer; }
+        .calendar-day-cell.selected { background-color: var(--ios-blue); color: white !important; }
+        .calendar-dot { height: 4px; width: 4px; border-radius: 50%; position: absolute; bottom: 4px; }
         .dot-green { background-color: var(--ios-green); }
         .dot-orange { background-color: var(--ios-orange); }
-
-        .category-row {
-            background-color: var(--ios-card-bg);
-            border-radius: 12px;
-            padding: 14px;
-            margin-bottom: 10px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-        }
-
-        .category-info {
-            display: flex;
-            justify-content: space-between;
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 6px;
-        }
-
-        .progress-bar-bg {
-            background-color: var(--ios-gray-bg);
-            height: 8px;
-            border-radius: 4px;
-            overflow: hidden;
-        }
-
-        .progress-bar-fill {
-            background-color: var(--ios-green);
-            height: 100%;
-            width: 0%;
-            transition: width 0.3s ease;
-        }
-
-        .settings-group {
-            background-color: var(--ios-card-bg);
-            border-radius: 14px;
-            margin-bottom: 16px;
-            overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-        }
-
-        .settings-row {
-            padding: 14px 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 0.5px solid var(--ios-border);
-        }
-
-        .settings-row:last-child {
-            border-bottom: none;
-        }
-
-        .settings-label {
-            font-size: 15px;
-            font-weight: 500;
-        }
-
-        .joint-code-input {
-            border: 1px solid var(--ios-border);
-            border-radius: 8px;
-            padding: 6px 10px;
-            font-size: 14px;
-            text-align: center;
-            text-transform: uppercase;
-            width: 120px;
-            font-weight: 600;
-            color: var(--ios-blue);
-        }
-
-        .tab-bar {
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-            max-width: 430px;
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-top: 0.5px solid var(--ios-border);
-            display: flex;
-            height: 65px;
-            padding-bottom: env(safe-area-inset-bottom);
-            z-index: 200;
-        }
-
-        .tab-item {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: var(--ios-text-sec);
-            font-size: 10px;
-            font-weight: 500;
-            cursor: pointer;
-            gap: 3px;
-        }
-
-        .tab-item.active {
-            color: var(--ios-blue);
-        }
-
-        .tab-icon {
-            font-size: 20px;
-        }
-
-        .empty-state {
-            padding: 40px 16px;
-            text-align: center;
-            color: var(--ios-text-sec);
-            font-size: 14px;
-        }
+        .category-row { background-color: var(--ios-card-bg); border-radius: 12px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+        .category-info { display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+        .progress-bar-bg { background-color: var(--ios-gray-bg); height: 8px; border-radius: 4px; overflow: hidden; }
+        .progress-bar-fill { background-color: var(--ios-green); height: 100%; width: 0%; transition: width 0.3s ease; }
+        .settings-group { background-color: var(--ios-card-bg); border-radius: 14px; margin-bottom: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+        .settings-row { padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 0.5px solid var(--ios-border); }
+        .settings-row:last-child { border-bottom: none; }
+        .settings-label { font-size: 15px; font-weight: 500; }
+        .joint-code-input { border: 1px solid var(--ios-border); border-radius: 8px; padding: 6px 10px; font-size: 14px; text-align: center; text-transform: uppercase; width: 120px; font-weight: 600; color: var(--ios-blue); }
+        .btn-save { background: var(--ios-blue); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 600; cursor: pointer;}
+        .tab-bar { position: fixed; bottom: 0; width: 100%; max-width: 430px; background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 0.5px solid var(--ios-border); display: flex; height: 65px; padding-bottom: env(safe-area-inset-bottom); z-index: 200; }
+        .tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--ios-text-sec); font-size: 10px; font-weight: 500; cursor: pointer; gap: 3px; }
+        .tab-item.active { color: var(--ios-blue); }
+        .tab-icon { font-size: 20px; }
+        .empty-state { padding: 40px 16px; text-align: center; color: var(--ios-text-sec); font-size: 14px; }
     </style>
 </head>
 <body>
@@ -414,6 +86,7 @@
     <div class="app-container">
         <header>
             <h1 id="page-title">Bugün</h1>
+            <div id="sync-indicator" class="sync-status">Bağlanıyor...</div>
         </header>
 
         <div class="countdown-widget">
@@ -454,11 +127,10 @@
             <div class="settings-group">
                 <div class="settings-row">
                     <span class="settings-label">Ortak Aile Kodu</span>
-                    <input type="text" class="joint-code-input" id="joint-code-field" value="EV-CZD26">
+                    <input type="text" class="joint-code-input" id="joint-code-field">
                 </div>
                 <div class="settings-row">
-                    <span class="settings-label">Senkronizasyon (Firebase)</span>
-                    <span class="settings-label" style="color: var(--ios-green); font-weight: 600;">Aktif ve Bağlı</span>
+                    <button class="btn-save" onclick="updateJointCode()">Kodu Kaydet ve Bağlan</button>
                 </div>
             </div>
 
@@ -488,7 +160,7 @@
                 <span class="tab-icon">📊</span>
                 <span>İlerleme</span>
             </div>
-            <div class="tab-item" onclick="switchTab('settings', 'Ortak Takip')">
+            <div class="tab-item" onclick="switchTab('settings', 'Ayarlar')">
                 <span class="tab-icon">⚙️</span>
                 <span>Ayarlar</span>
             </div>
@@ -496,7 +168,23 @@
     </div>
 
     <script>
-        // Müfredat Veri Seti
+        // --- 1. FIREBASE CONFIG AYARLARI (GİRİLEN GERÇEK VERİLER) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyADpIRNLQEIer_gplTgwKi_EKkfcyrYoqY",
+            authDomain: "maasgunu-bd353.firebaseapp.com",
+            projectId: "maasgunu-bd353",
+            storageBucket: "maasgunu-bd353.firebasestorage.app",
+            messagingSenderId: "485904329467",
+            appId: "1:485904329467:web:579d932ae8f25958901e5e",
+            measurementId: "G-GQT1Q7FGDM"
+        };
+        
+        // Firebase Başlatma
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        let unsubscribe = null; 
+        // --------------------------------------------------------------------------
+
         const ALL_TOPICS = [
             { id: 1, category: "AGS Sözel Yetenek", title: "Sözcükte Anlam", duration: "30 dk", questions: "20 Soru" },
             { id: 2, category: "AGS Sözel Yetenek", title: "Cümlede Anlam", duration: "30 dk", questions: "20 Soru" },
@@ -562,19 +250,72 @@
         const TARGET_DATE = new Date("2026-07-12T00:00:00");
         let appSchedule = {};
         let completedTaskIds = [];
+        let jointCode = localStorage.getItem("ags_joint_code") || "EV-CZD26";
 
         document.addEventListener("DOMContentLoaded", () => {
             initCountdown();
-            loadState();
-            if (Object.keys(appSchedule).length === 0) {
+            document.getElementById("joint-code-field").value = jointCode;
+            
+            const savedSchedule = localStorage.getItem("ags_schedule");
+            if (savedSchedule) {
+                appSchedule = JSON.parse(savedSchedule);
+            } else {
                 generateInitialSchedule();
             }
+
+            listenToFirebase();
+            registerServiceWorker();
+        });
+
+        function listenToFirebase() {
+            if (unsubscribe) unsubscribe();
+            const syncStatus = document.getElementById("sync-indicator");
+            syncStatus.innerText = "Bağlanıyor...";
+            syncStatus.className = "sync-status";
+
+            unsubscribe = db.collection("ags_tracker").doc(jointCode).onSnapshot((doc) => {
+                if (doc.exists) {
+                    completedTaskIds = doc.data().completed || [];
+                } else {
+                    db.collection("ags_tracker").doc(jointCode).set({ completed: [] });
+                    completedTaskIds = [];
+                }
+                syncStatus.innerText = "Senkronize ✓";
+                syncStatus.className = "sync-status online";
+                refreshUI();
+            }, (error) => {
+                console.log("Firebase Hatası: ", error);
+                syncStatus.innerText = "Bağlantı Hatası!";
+            });
+        }
+
+        function toggleTask(id) {
+            if (completedTaskIds.includes(id)) {
+                completedTaskIds = completedTaskIds.filter(tid => tid !== id);
+            } else {
+                completedTaskIds.push(id);
+            }
+            
+            db.collection("ags_tracker").doc(jointCode).update({ completed: completedTaskIds });
+            refreshUI();
+        }
+
+        function updateJointCode() {
+            const newCode = document.getElementById("joint-code-field").value.toUpperCase();
+            if(newCode) {
+                jointCode = newCode;
+                localStorage.setItem("ags_joint_code", jointCode);
+                listenToFirebase();
+                alert(`Aile kodu "${jointCode}" olarak güncellendi ve bağlandı.`);
+            }
+        }
+
+        function refreshUI() {
             renderTodayTasks();
             renderCurriculumProgress();
             buildCalendar();
             updateAIMotivation();
-            registerServiceWorker();
-        });
+        }
 
         function initCountdown() {
             const today = new Date();
@@ -583,62 +324,36 @@
             document.getElementById("countdown-display").innerText = `Son ${daysLeft} Gün`;
         }
 
-        function loadState() {
-            const savedSchedule = localStorage.getItem("ags_schedule");
-            const savedCompleted = localStorage.getItem("ags_completed");
-            if (savedSchedule) appSchedule = JSON.parse(savedSchedule);
-            if (savedCompleted) completedTaskIds = JSON.parse(savedCompleted);
-        }
-
-        function saveState() {
-            localStorage.setItem("ags_schedule", JSON.stringify(appSchedule));
-            localStorage.setItem("ags_completed", JSON.stringify(completedTaskIds));
-            renderCurriculumProgress();
-            updateAIMotivation();
-        }
-
         function generateInitialSchedule() {
-            let startDate = new Date("2026-05-16");
+            let startDate = new Date("2026-05-17"); // Planlama bugünden (17 Mayıs) itibaren başlayacak
             let tempTopics = [...ALL_TOPICS];
             let dayCounter = 0;
-
             while(tempTopics.length > 0) {
-                let currentDateStr = formatDate(startDate);
+                let currentDateStr = startDate.toISOString().split('T')[0];
                 appSchedule[currentDateStr] = [];
-                
                 let pullCount = (dayCounter % 3 === 0 && tempTopics.length > 1) ? 2 : 1;
                 for(let i=0; i<pullCount; i++) {
-                    if(tempTopics.length > 0) {
-                        let topic = tempTopics.shift();
-                        appSchedule[currentDateStr].push({ id: topic.id, completed: false });
-                    }
+                    if(tempTopics.length > 0) appSchedule[currentDateStr].push({ id: tempTopics.shift().id });
                 }
                 startDate.setDate(startDate.getDate() + 1);
                 dayCounter++;
             }
-            saveState();
-        }
-
-        function formatDate(dateObj) {
-            return dateObj.toISOString().split('T')[0];
+            localStorage.setItem("ags_schedule", JSON.stringify(appSchedule));
         }
 
         function getTodayDateStr() {
             let d = new Date();
-            if (d.getFullYear() !== 2026) return "2026-05-16"; 
-            return formatDate(d);
+            if (d.getFullYear() !== 2026) return "2026-05-17"; 
+            return d.toISOString().split('T')[0];
         }
 
         function renderTodayTasks() {
             const todayStr = getTodayDateStr();
             const todayList = document.getElementById("today-tasks-list");
             const completedList = document.getElementById("completed-tasks-list");
-            
-            todayList.innerHTML = "";
-            completedList.innerHTML = "";
+            todayList.innerHTML = ""; completedList.innerHTML = "";
 
             checkMissedDays(todayStr);
-
             const todaysTaskRefs = appSchedule[todayStr] || [];
 
             if(todaysTaskRefs.length === 0) {
@@ -649,7 +364,6 @@
             todaysTaskRefs.forEach(ref => {
                 const topicDetails = ALL_TOPICS.find(t => t.id === ref.id);
                 if (!topicDetails) return;
-
                 const isCompleted = completedTaskIds.includes(ref.id);
                 const cardHTML = `
                     <div class="task-card ${isCompleted ? 'completed' : ''}">
@@ -660,67 +374,39 @@
                         <div class="task-details">
                             <div class="task-category">${topicDetails.category}</div>
                             <div class="task-title">${topicDetails.title}</div>
-                            <div class="task-meta">
-                                <span>⏱️ ${topicDetails.duration}</span>
-                                <span>🎯 ${topicDetails.questions}</span>
-                            </div>
+                            <div class="task-meta"><span>⏱️ ${topicDetails.duration}</span><span>🎯 ${topicDetails.questions}</span></div>
                         </div>
-                    </div>
-                `;
-
-                if(isCompleted) {
-                    completedList.insertAdjacentHTML('beforeend', cardHTML);
-                } else {
-                    todayList.insertAdjacentHTML('beforeend', cardHTML);
-                }
+                    </div>`;
+                if(isCompleted) completedList.insertAdjacentHTML('beforeend', cardHTML);
+                else todayList.insertAdjacentHTML('beforeend', cardHTML);
             });
-        }
-
-        function toggleTask(id) {
-            if (completedTaskIds.includes(id)) {
-                completedTaskIds = completedTaskIds.filter(tid => tid !== id);
-            } else {
-                completedTaskIds.push(id);
-            }
-            saveState();
-            renderTodayTasks();
-            buildCalendar();
         }
 
         function checkMissedDays(todayStr) {
             const telafiContainer = document.getElementById("telafi-container");
             telafiContainer.innerHTML = "";
             let missedCount = 0;
-
             Object.keys(appSchedule).forEach(dateStr => {
                 if(dateStr < todayStr) {
-                    appSchedule[dateStr].forEach(ref => {
-                        if(!completedTaskIds.includes(ref.id)) missedCount++;
-                    });
+                    appSchedule[dateStr].forEach(ref => { if(!completedTaskIds.includes(ref.id)) missedCount++; });
                 }
             });
-
             if(missedCount > 0) {
                 telafiContainer.innerHTML = `
                     <div class="telafi-banner">
                         <div class="telafi-text">⚠️ Geçmiş günlerden tamamlanmamış ${missedCount} konu var! Planı yeniden dağıtalım.</div>
                         <button class="btn-telafi" onclick="triggerReschedule()">Planı Yeniden Dağıt</button>
-                    </div>
-                `;
+                    </div>`;
             }
         }
 
         function triggerReschedule() {
             const todayStr = getTodayDateStr();
             let uncompletedRefs = [];
-
             Object.keys(appSchedule).forEach(dateStr => {
                 if(dateStr <= todayStr) {
                     appSchedule[dateStr] = appSchedule[dateStr].filter(ref => {
-                        if(!completedTaskIds.includes(ref.id)) {
-                            uncompletedRefs.push(ref);
-                            return false;
-                        }
+                        if(!completedTaskIds.includes(ref.id)) { uncompletedRefs.push(ref); return false; }
                         return true;
                     });
                 }
@@ -728,17 +414,14 @@
 
             let tomorrow = new Date(todayStr);
             tomorrow.setDate(tomorrow.getDate() + 1);
-
             while(uncompletedRefs.length > 0) {
-                let futureDateStr = formatDate(tomorrow);
+                let futureDateStr = tomorrow.toISOString().split('T')[0];
                 if(!appSchedule[futureDateStr]) appSchedule[futureDateStr] = [];
                 appSchedule[futureDateStr].push(uncompletedRefs.shift());
                 tomorrow.setDate(tomorrow.getDate() + 1);
             }
-
-            saveState();
-            renderTodayTasks();
-            buildCalendar();
+            localStorage.setItem("ags_schedule", JSON.stringify(appSchedule));
+            refreshUI();
             alert("Eksik konular kalan günlere dengeli şekilde dağıtıldı!");
         }
 
@@ -746,24 +429,16 @@
             const container = document.getElementById("curriculum-progress-container");
             container.innerHTML = "";
             const categories = [...new Set(ALL_TOPICS.map(t => t.category))];
-            
             categories.forEach(cat => {
                 const catTopics = ALL_TOPICS.filter(t => t.category === cat);
                 const total = catTopics.length;
                 const completed = catTopics.filter(t => completedTaskIds.includes(t.id)).length;
                 const pct = Math.round((completed / total) * 100) || 0;
-
                 container.insertAdjacentHTML('beforeend', `
                     <div class="category-row">
-                        <div class="category-info">
-                            <span>${cat}</span>
-                            <span style="color: var(--ios-text-sec);">${completed}/${total} (%${pct})</span>
-                        </div>
-                        <div class="progress-bar-bg">
-                            <div class="progress-bar-fill" style="width: ${pct}%;"></div>
-                        </div>
-                    </div>
-                `);
+                        <div class="category-info"><span>${cat}</span><span style="color: var(--ios-text-sec);">${completed}/${total} (%${pct})</span></div>
+                        <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${pct}%;"></div></div>
+                    </div>`);
             });
         }
 
@@ -773,32 +448,25 @@
             const weekdays = ["Pt", "Sa", "Ça", "Pe", "Cu", "Ct", "Pz"];
             weekdays.forEach(w => grid.insertAdjacentHTML('beforeend', `<div class="calendar-header-cell">${w}</div>`));
 
-            let year = 2026, month = 4; // Mayıs
+            let year = 2026, month = 4;
             let firstDayIndex = new Date(year, month, 1).getDay();
             if (firstDayIndex === 0) firstDayIndex = 7;
-
-            for(let i = 1; i < firstDayIndex; i++) {
-                grid.insertAdjacentHTML('beforeend', `<div class="calendar-day-cell"></div>`);
-            }
+            for(let i = 1; i < firstDayIndex; i++) grid.insertAdjacentHTML('beforeend', `<div class="calendar-day-cell"></div>`);
 
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             for(let day = 1; day <= daysInMonth; day++) {
                 let currentStr = `2026-05-${day.toString().padStart(2, '0')}`;
                 let tasks = appSchedule[currentStr] || [];
                 let dotClass = "";
-                
                 if(tasks.length > 0) {
                     let allDone = tasks.every(ref => completedTaskIds.includes(ref.id));
                     dotClass = allDone ? "dot-green" : "dot-orange";
                 }
-
-                let isToday = (day === 16);
+                let isToday = (day === 17);
                 grid.insertAdjacentHTML('beforeend', `
                     <div class="calendar-day-cell ${isToday ? 'selected' : ''}" onclick="showDayDetails('${currentStr}', this)">
-                        ${day}
-                        ${dotClass ? `<div class="calendar-dot ${dotClass}"></div>` : ''}
-                    </div>
-                `);
+                        ${day} ${dotClass ? `<div class="calendar-dot ${dotClass}"></div>` : ''}
+                    </div>`);
             }
         }
 
@@ -807,12 +475,9 @@
             element.classList.add('selected');
             const container = document.getElementById("selected-day-tasks");
             const dayTasks = appSchedule[dateStr] || [];
-
             if(dayTasks.length === 0) {
-                container.innerHTML = `<div class="empty-state">Bu güne ait çalışma bulunmuyor.</div>`;
-                return;
+                container.innerHTML = `<div class="empty-state">Bu güne ait çalışma bulunmuyor.</div>`; return;
             }
-
             container.innerHTML = "";
             dayTasks.forEach(ref => {
                 const topicDetails = ALL_TOPICS.find(t => t.id === ref.id);
@@ -821,27 +486,19 @@
                     <div class="task-card" style="box-shadow: none; border: 1px solid var(--ios-border);">
                         <div class="task-details">
                             <div class="task-category" style="color: ${isCompleted ? 'var(--ios-green)' : 'var(--ios-blue)'}">
-                                ${topicDetails.category} ${isCompleted ? '✓' : ''}
-                            </div>
+                                ${topicDetails.category} ${isCompleted ? '✓' : ''}</div>
                             <div class="task-title">${topicDetails.title}</div>
                             <div class="task-meta">⏱️ ${topicDetails.duration} | 🎯 ${topicDetails.questions}</div>
                         </div>
-                    </div>
-                `);
+                    </div>`);
             });
         }
 
         function updateAIMotivation() {
             const msgBox = document.getElementById("ai-motivation-text");
-            const total = ALL_TOPICS.length;
-            const done = completedTaskIds.length;
-            const pct = Math.round((done / total) * 100);
-
-            if(pct === 0) {
-                msgBox.innerText = "Yolculuk ilk adımla başlar! Bugünün konularını tamamlayarak harika bir başlangıç yapabilirsin.";
-            } else {
-                msgBox.innerText = `Harika! Müfredatın %${pct}'ini tamamladın. Yusuf da ilerleyişini canlı takip ediyor, disipline devam!`;
-            }
+            const pct = Math.round((completedTaskIds.length / ALL_TOPICS.length) * 100);
+            if(pct === 0) msgBox.innerText = "Yolculuk ilk adımla başlar! Bugünün konularını tamamlayarak harika bir başlangıç yapabilirsin.";
+            else msgBox.innerText = `Harika! Müfredatın %${pct}'ini tamamladın. Disipline devam!`;
         }
 
         function switchTab(tabId, title) {
@@ -852,13 +509,8 @@
             event.currentTarget.classList.add('active');
         }
 
-        // PWA Servis İşçisi Kaydı
         function registerServiceWorker() {
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('sw.js')
-                .then(() => console.log('PWA Servis Kartı Aktif.'))
-                .catch(err => console.log('SW Hatası:', err));
-            }
+            if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
         }
     </script>
 </body>
