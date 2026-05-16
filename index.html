@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>AGS & ÖABT Akıllı Planlayıcı</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="AGS Plan">
+    <link rel="apple-touch-icon" href="https://via.placeholder.com/192/007AFF/FFFFFF?text=AGS">
+    
+    <style>
+        :root {
+            --ios-blue: #007AFF;
+            --ios-green: #34C759;
+            --ios-orange: #FF9500;
+            --ios-red: #FF3B30;
+            --ios-gray-bg: #F2F2F7;
+            --ios-card-bg: #FFFFFF;
+            --ios-text-main: #000000;
+            --ios-text-sec: #8E8E93;
+            --ios-border: #E5E5EA;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--ios-gray-bg);
+            color: var(--ios-text-main);
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 430px;
+            background-color: var(--ios-gray-bg);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            min-height: 100vh;
+            padding-bottom: 85px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 20px 16px 12px 16px;
+            border-bottom: 0.5px solid var(--ios-border);
+        }
+
+        header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .countdown-widget {
+            background: linear-gradient(135deg, #1D2A44, #0F172A);
+            color: white;
+            border-radius: 16px;
+            padding: 16px;
+            margin: 12px 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .countdown-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #94A3B8;
+            margin-bottom: 4px;
+        }
+
+        .countdown-days {
+            font-size: 32px;
+            font-weight: 800;
+        }
+
+        .ai-box {
+            background-color: #E3F2FD;
+            border-left: 4px solid var(--ios-blue);
+            border-radius: 12px;
+            padding: 14px;
+            margin: 0 16px 16px 16px;
+        }
+
+        .ai-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #0D47A1;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+
+        .ai-text {
+            font-size: 13px;
+            color: #1565C0;
+            line-height: 1.4;
+        }
+
+        .view {
+            display: none;
+            padding: 0 16px;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 16px 0 8px 0;
+            color: #1C1C1E;
+        }
+
+        .task-card {
+            background-color: var(--ios-card-bg);
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        .task-card.completed {
+            opacity: 0.6;
+        }
+
+        .checkbox-container {
+            position: relative;
+            cursor: pointer;
+            display: block;
+            margin-top: 2px;
+        }
+
+        .checkbox-container input {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+            height: 0;
+            width: 0;
+        }
+
+        .checkmark {
+            height: 22px;
+            width: 22px;
+            background-color: #FFF;
+            border: 2px solid var(--ios-border);
+            border-radius: 50%;
+            display: inline-block;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .checkbox-container input:checked ~ .checkmark {
+            background-color: var(--ios-blue);
+            border-color: var(--ios-blue);
+        }
+
+        .checkmark:after {
+            content: "";
+            position: absolute;
+            display: none;
+            left: 7px;
+            top: 3px;
+            width: 5px;
+            height: 10px;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+
+        .checkbox-container input:checked ~ .checkmark:after {
+            display: block;
+        }
+
+        .task-details {
+            flex-grow: 1;
+        }
+
+        .task-category {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--ios-blue);
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+
+        .task-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--ios-text-main);
+            line-height: 1.3;
+        }
+
+        .task-meta {
+            font-size: 12px;
+            color: var(--ios-text-sec);
+            margin-top: 4px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .telafi-banner {
+            background-color: #FFF3E0;
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 16px;
+            border: 1px solid #FFE0B2;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .telafi-text {
+            font-size: 13px;
+            color: #E65100;
+            font-weight: 500;
+        }
+
+        .btn-telafi {
+            background-color: var(--ios-orange);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            align-self: flex-start;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            background-color: var(--ios-card-bg);
+            border-radius: 14px;
+            padding: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+
+        .calendar-header-cell {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--ios-text-sec);
+            text-align: center;
+            padding-bottom: 8px;
+        }
+
+        .calendar-day-cell {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 50%;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .calendar-day-cell.selected {
+            background-color: var(--ios-blue);
+            color: white !important;
+        }
+
+        .calendar-dot {
+            height: 4px;
+            width: 4px;
+            border-radius: 50%;
+            position: absolute;
+            bottom: 4px;
+        }
+
+        .dot-green { background-color: var(--ios-green); }
+        .dot-orange { background-color: var(--ios-orange); }
+
+        .category-row {
+            background-color: var(--ios-card-bg);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+        }
+
+        .category-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .progress-bar-bg {
+            background-color: var(--ios-gray-bg);
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            background-color: var(--ios-green);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .settings-group {
+            background-color: var(--ios-card-bg);
+            border-radius: 14px;
+            margin-bottom: 16px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+
+        .settings-row {
+            padding: 14px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 0.5px solid var(--ios-border);
+        }
+
+        .settings-row:last-child {
+            border-bottom: none;
+        }
+
+        .settings-label {
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .joint-code-input {
+            border: 1px solid var(--ios-border);
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 14px;
+            text-align: center;
+            text-transform: uppercase;
+            width: 120px;
+            font-weight: 600;
+            color: var(--ios-blue);
+        }
+
+        .tab-bar {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            max-width: 430px;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 0.5px solid var(--ios-border);
+            display: flex;
+            height: 65px;
+            padding-bottom: env(safe-area-inset-bottom);
+            z-index: 200;
+        }
+
+        .tab-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--ios-text-sec);
+            font-size: 10px;
+            font-weight: 500;
+            cursor: pointer;
+            gap: 3px;
+        }
+
+        .tab-item.active {
+            color: var(--ios-blue);
+        }
+
+        .tab-icon {
+            font-size: 20px;
+        }
+
+        .empty-state {
+            padding: 40px 16px;
+            text-align: center;
+            color: var(--ios-text-sec);
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <h1 id="page-title">Bugün</h1>
+        </header>
+
+        <div class="countdown-widget">
+            <div class="countdown-title">AGS '26 Geri Sayım</div>
+            <div class="countdown-days" id="countdown-display">Yükleniyor...</div>
+        </div>
+
+        <div class="ai-box" id="ai-motivation-box">
+            <div class="ai-title">🧠 Yapay Zeka Asistanı</div>
+            <div class="ai-text" id="ai-motivation-text">Harika bir gün! Programı hazırladım, hedeflere odaklanalım.</div>
+        </div>
+
+        <div id="view-today" class="view active">
+            <div id="telafi-container"></div>
+            <div class="section-title">Bugünün Çalışma Planı</div>
+            <div id="today-tasks-list"></div>
+            
+            <div class="section-title" style="margin-top: 24px;">Tamamlananlar</div>
+            <div id="completed-tasks-list"></div>
+        </div>
+
+        <div id="view-calendar" class="view">
+            <div class="section-title">Mayıs 2026</div>
+            <div class="calendar-grid" id="calendar-grid-container"></div>
+            <div class="section-title" style="margin-top: 20px;">Seçili Günün Programı</div>
+            <div id="selected-day-tasks">
+                <div class="empty-state">Takvimden bir gün seçerek detayları görebilirsiniz.</div>
+            </div>
+        </div>
+
+        <div id="view-stats" class="view">
+            <div class="section-title">Müfredat İlerleme Durumu</div>
+            <div id="curriculum-progress-container"></div>
+        </div>
+
+        <div id="view-settings" class="view">
+            <div class="section-title">Eş Zamanlı Takip Kurulumu</div>
+            <div class="settings-group">
+                <div class="settings-row">
+                    <span class="settings-label">Ortak Aile Kodu</span>
+                    <input type="text" class="joint-code-input" id="joint-code-field" value="EV-CZD26">
+                </div>
+                <div class="settings-row">
+                    <span class="settings-label">Senkronizasyon (Firebase)</span>
+                    <span class="settings-label" style="color: var(--ios-green); font-weight: 600;">Aktif ve Bağlı</span>
+                </div>
+            </div>
+
+            <div class="section-title">Uygulama Bilgileri</div>
+            <div class="settings-group">
+                <div class="settings-row">
+                    <span class="settings-label">Günlük Çalışma Limiti</span>
+                    <span class="settings-label" style="color: var(--ios-text-sec);">1 - 2 Saat</span>
+                </div>
+                <div class="settings-row">
+                    <span class="settings-label">Hedef Sınav Tarihi</span>
+                    <span class="settings-label" style="color: var(--ios-text-sec);">12 Temmuz 2026</span>
+                </div>
+            </div>
+        </div>
+
+        <nav class="tab-bar">
+            <div class="tab-item active" onclick="switchTab('today', 'Bugün')">
+                <span class="tab-icon">📋</span>
+                <span>Bugün</span>
+            </div>
+            <div class="tab-item" onclick="switchTab('calendar', 'Takvim')">
+                <span class="tab-icon">📅</span>
+                <span>Takvim</span>
+            </div>
+            <div class="tab-item" onclick="switchTab('stats', 'İstatistik')">
+                <span class="tab-icon">📊</span>
+                <span>İlerleme</span>
+            </div>
+            <div class="tab-item" onclick="switchTab('settings', 'Ortak Takip')">
+                <span class="tab-icon">⚙️</span>
+                <span>Ayarlar</span>
+            </div>
+        </nav>
+    </div>
+
+    <script>
+        // Müfredat Veri Seti
+        const ALL_TOPICS = [
+            { id: 1, category: "AGS Sözel Yetenek", title: "Sözcükte Anlam", duration: "30 dk", questions: "20 Soru" },
+            { id: 2, category: "AGS Sözel Yetenek", title: "Cümlede Anlam", duration: "30 dk", questions: "20 Soru" },
+            { id: 3, category: "AGS Sözel Yetenek", title: "Anlatımın Oluşması", duration: "35 dk", questions: "15 Soru" },
+            { id: 4, category: "AGS Sözel Yetenek", title: "Paragrafta Anlam", duration: "45 dk", questions: "25 Soru" },
+            { id: 5, category: "AGS Sözel Yetenek", title: "Sözel Mantık", duration: "40 dk", questions: "20 Soru" },
+            { id: 6, category: "AGS Sayısal Yetenek", title: "Temel Matematik Kuralları", duration: "45 dk", questions: "15 Soru" },
+            { id: 7, category: "AGS Sayısal Yetenek", title: "Grafik ve Tablo Yorumlama", duration: "40 dk", questions: "20 Soru" },
+            { id: 8, category: "AGS Sayısal Yetenek", title: "Mantıksal Muhakeme Problemleri", duration: "50 dk", questions: "15 Soru" },
+            { id: 9, category: "AGS Tarih", title: "İslamiyet Öncesi Türk Tarihi", duration: "30 dk", questions: "15 Soru" },
+            { id: 10, category: "AGS Tarih", title: "Türk İslam Devletleri", duration: "35 dk", questions: "15 Soru" },
+            { id: 11, category: "AGS Tarih", title: "Osmanlı Kuruluş Dönemi", duration: "30 dk", questions: "15 Soru" },
+            { id: 12, category: "AGS Tarih", title: "Osmanlı Yükselme Dönemi", duration: "35 dk", questions: "15 Soru" },
+            { id: 13, category: "AGS Tarih", title: "Osmanlı Duraklama Dönemi", duration: "30 dk", questions: "15 Soru" },
+            { id: 14, category: "AGS Tarih", title: "Osmanlı Gerileme Dönemi", duration: "35 dk", questions: "15 Soru" },
+            { id: 15, category: "AGS Tarih", title: "Osmanlı Kültür ve Medeniyet / Uygarlığı", duration: "45 dk", questions: "20 Soru" },
+            { id: 16, category: "AGS Tarih", title: "XX. Yüzyılda Osmanlı Devleti", duration: "40 dk", questions: "20 Soru" },
+            { id: 17, category: "AGS Tarih", title: "Milli Mücadele Dönemi", duration: "50 dk", questions: "25 Soru" },
+            { id: 18, category: "AGS Tarih", title: "Atatürk İlkeleri", duration: "25 dk", questions: "15 Soru" },
+            { id: 19, category: "AGS Tarih", title: "Atatürk Dönemi Türkiye Dış Politikası", duration: "30 dk", questions: "15 Soru" },
+            { id: 20, category: "AGS Tarih", title: "Çağdaş Türk ve Dünya Tarihi", duration: "40 dk", questions: "20 Soru" },
+            { id: 21, category: "AGS Coğrafya", title: "Türkiye'nin Coğrafi Konumu ve Jeopolitiği", duration: "30 dk", questions: "15 Soru" },
+            { id: 22, category: "AGS Coğrafya", title: "Türkiye'nin Jeolojik Geçmişi ve Yer Şekilleri", duration: "40 dk", questions: "15 Soru" },
+            { id: 23, category: "AGS Coğrafya", title: "Türkiye'de Dış Kuvvetler", duration: "35 dk", questions: "15 Soru" },
+            { id: 24, category: "AGS Coğrafya", title: "Türkiye'nin Su Kaynakları, Toprak ve Bitki Örtüsü", duration: "40 dk", questions: "15 Soru" },
+            { id: 25, category: "AGS Coğrafya", title: "Türkiye'nin İklim Özellikleri ve Doğal Afetler", duration: "35 dk", questions: "15 Soru" },
+            { id: 26, category: "AGS Coğrafya", title: "Türkiye'de Nüfus, Yerleşme ve Göç", duration: "35 dk", questions: "20 Soru" },
+            { id: 27, category: "AGS Coğrafya", title: "Türkiye'de Tarım ve Hayvancılık", duration: "35 dk", questions: "15 Soru" },
+            { id: 28, category: "AGS Coğrafya", title: "Türkiye'de Madenler ve Enerji Kaynakları", duration: "35 dk", questions: "15 Soru" },
+            { id: 29, category: "AGS Coğrafya", title: "Türkiye'de Sanayi, Ulaşım, Turizm ve Ticaret", duration: "45 dk", questions: "20 Soru" },
+            { id: 30, category: "AGS Coğrafya", title: "Türkiye'de Bölge Sınıflandırması ve Kalkınma Projeleri", duration: "30 dk", questions: "15 Soru" },
+            { id: 31, category: "AGS Mevzuat", title: "T.C. Anayasası (2709 Sayılı Kanun)", duration: "45 dk", questions: "20 Soru" },
+            { id: 32, category: "AGS Mevzuat", title: "1739 Sayılı Milli Eğitim Temel Kanunu", duration: "35 dk", questions: "15 Soru" },
+            { id: 33, category: "AGS Mevzuat", title: "222 Sayılı İlköğretim ve Eğitim Kanunu", duration: "35 dk", questions: "15 Soru" },
+            { id: 34, category: "AGS Mevzuat", title: "7528 Sayılı Öğretmenlik Mesleği Kanunu", duration: "30 dk", questions: "15 Soru" },
+            { id: 35, category: "Eğitimin Temelleri", title: "Eğitim Biliminin Genel Kavramları ve Süreçleri", duration: "35 dk", questions: "15 Soru" },
+            { id: 36, category: "Eğitimin Temelleri", title: "Eğitimin Tarihi, Felsefi ve Toplumsal Temelleri", duration: "40 dk", questions: "15 Soru" },
+            { id: 37, category: "Eğitimin Temelleri", title: "Eğitimin Psikolojik, Ekonomik ve Politik Temelleri", duration: "40 dk", questions: "15 Soru" },
+            { id: 38, category: "Eğitimin Temelleri", title: "Türk Milli Eğitim Sisteminin Genel Yapısı", duration: "35 dk", questions: "15 Soru" },
+            { id: 39, category: "Eğitimin Temelleri", title: "Türkiye Yüzyılı Maarif Modeli Yapısı", duration: "45 dk", questions: "20 Soru" },
+            { id: 40, category: "Eğitimin Temelleri", title: "Eğitim ve Öğretimde Etik İlkeler", duration: "25 dk", questions: "10 Soru" },
+            { id: 41, category: "Eğitimin Temelleri", title: "Eğitim ve Öğretim Teknolojileri", duration: "30 dk", questions: "15 Soru" },
+            { id: 42, category: "Eğitimin Temelleri", title: "Öğrenmeyi Etkileyen Faktörler & Klasik Koşullanma", duration: "35 dk", questions: "15 Soru" },
+            { id: 43, category: "Eğitimin Temelleri", title: "Piaget'nin Bilişsel Gelişim Kuramı", duration: "40 dk", questions: "20 Soru" },
+            { id: 44, category: "Eğitimin Temelleri", title: "Öğrenme Kuramları ve Değerlendirme", duration: "45 dk", questions: "20 Soru" },
+            { id: 45, category: "Eğitimin Temelleri", title: "Rehberlik & Gelişim Psikolojisi Giriş", duration: "40 dk", questions: "15 Soru" },
+            { id: 46, category: "Eğitimin Temelleri", title: "Sınıf Yönetimi & Program Okuryazarlığı", duration: "35 dk", questions: "15 Soru" },
+            { id: 47, category: "Okul Öncesi ÖABT", title: "Erken Çocukluk Eğitimine Giriş", duration: "40 dk", questions: "20 Soru" },
+            { id: 48, category: "Okul Öncesi ÖABT", title: "Çocuk Sağlığı ve İlk Yardım", duration: "35 dk", questions: "15 Soru" },
+            { id: 49, category: "Okul Öncesi ÖABT", title: "Erken Çocukluk Döneminde Gelişim", duration: "50 dk", questions: "25 Soru" },
+            { id: 50, category: "Okul Öncesi ÖABT", title: "Çocuk Ruh Sağlığı Yapısı", duration: "45 dk", questions: "20 Soru" },
+            { id: 51, category: "Okul Öncesi ÖABT", title: "Erken Çocukluk Dönemi Edebiyatı", duration: "35 dk", questions: "15 Soru" },
+            { id: 52, category: "Okul Öncesi ÖABT", title: "Erken Çocuklukta Program, Yöntem ve Yaklaşımlar", duration: "50 dk", questions: "25 Soru" },
+            { id: 53, category: "Okul Öncesi ÖABT", title: "Anne-Baba Eğitimi Yaklaşımları", duration: "35 dk", questions: "15 Soru" },
+            { id: 54, category: "Okul Öncesi ÖABT", title: "Çocuk Hakları ve Mevzuatı", duration: "30 dk", questions: "15 Soru" },
+            { id: 55, category: "Okul Öncesi ÖABT", title: "Alan Eğitimi: Fen ve Matematik Eğitimi", duration: "45 dk", questions: "20 Soru" },
+            { id: 56, category: "Okul Öncesi ÖABT", title: "Alan Eğitimi: Görsel Sanatlar ve Müzik Eğitimi", duration: "40 dk", questions: "20 Soru" },
+            { id: 57, category: "Okul Öncesi ÖABT", title: "Alan Eğitimi: Oyun ve Drama Eğitimi", duration: "45 dk", questions: "20 Soru" },
+            { id: 58, category: "Okul Öncesi ÖABT", title: "Alan Eğitimi: Öğrenme Yaklaşımları ve Okula Uyum", duration: "40 dk", questions: "25 Soru" },
+            { id: 59, category: "Okul Öncesi ÖABT", title: "Alan Eğitimi: Erken Okuryazarlık Eğitimi", duration: "40 dk", questions: "20 Soru" }
+        ];
+
+        const TARGET_DATE = new Date("2026-07-12T00:00:00");
+        let appSchedule = {};
+        let completedTaskIds = [];
+
+        document.addEventListener("DOMContentLoaded", () => {
+            initCountdown();
+            loadState();
+            if (Object.keys(appSchedule).length === 0) {
+                generateInitialSchedule();
+            }
+            renderTodayTasks();
+            renderCurriculumProgress();
+            buildCalendar();
+            updateAIMotivation();
+            registerServiceWorker();
+        });
+
+        function initCountdown() {
+            const today = new Date();
+            const timeDiff = TARGET_DATE - today;
+            const daysLeft = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+            document.getElementById("countdown-display").innerText = `Son ${daysLeft} Gün`;
+        }
+
+        function loadState() {
+            const savedSchedule = localStorage.getItem("ags_schedule");
+            const savedCompleted = localStorage.getItem("ags_completed");
+            if (savedSchedule) appSchedule = JSON.parse(savedSchedule);
+            if (savedCompleted) completedTaskIds = JSON.parse(savedCompleted);
+        }
+
+        function saveState() {
+            localStorage.setItem("ags_schedule", JSON.stringify(appSchedule));
+            localStorage.setItem("ags_completed", JSON.stringify(completedTaskIds));
+            renderCurriculumProgress();
+            updateAIMotivation();
+        }
+
+        function generateInitialSchedule() {
+            let startDate = new Date("2026-05-16");
+            let tempTopics = [...ALL_TOPICS];
+            let dayCounter = 0;
+
+            while(tempTopics.length > 0) {
+                let currentDateStr = formatDate(startDate);
+                appSchedule[currentDateStr] = [];
+                
+                let pullCount = (dayCounter % 3 === 0 && tempTopics.length > 1) ? 2 : 1;
+                for(let i=0; i<pullCount; i++) {
+                    if(tempTopics.length > 0) {
+                        let topic = tempTopics.shift();
+                        appSchedule[currentDateStr].push({ id: topic.id, completed: false });
+                    }
+                }
+                startDate.setDate(startDate.getDate() + 1);
+                dayCounter++;
+            }
+            saveState();
+        }
+
+        function formatDate(dateObj) {
+            return dateObj.toISOString().split('T')[0];
+        }
+
+        function getTodayDateStr() {
+            let d = new Date();
+            if (d.getFullYear() !== 2026) return "2026-05-16"; 
+            return formatDate(d);
+        }
+
+        function renderTodayTasks() {
+            const todayStr = getTodayDateStr();
+            const todayList = document.getElementById("today-tasks-list");
+            const completedList = document.getElementById("completed-tasks-list");
+            
+            todayList.innerHTML = "";
+            completedList.innerHTML = "";
+
+            checkMissedDays(todayStr);
+
+            const todaysTaskRefs = appSchedule[todayStr] || [];
+
+            if(todaysTaskRefs.length === 0) {
+                todayList.innerHTML = `<div class="empty-state">Bugün için planlanan ders yok. Dinlenebilirsiniz! ✨</div>`;
+                return;
+            }
+
+            todaysTaskRefs.forEach(ref => {
+                const topicDetails = ALL_TOPICS.find(t => t.id === ref.id);
+                if (!topicDetails) return;
+
+                const isCompleted = completedTaskIds.includes(ref.id);
+                const cardHTML = `
+                    <div class="task-card ${isCompleted ? 'completed' : ''}">
+                        <label class="checkbox-container">
+                            <input type="checkbox" ${isCompleted ? 'checked' : ''} onchange="toggleTask(${ref.id})">
+                            <span class="checkmark"></span>
+                        </label>
+                        <div class="task-details">
+                            <div class="task-category">${topicDetails.category}</div>
+                            <div class="task-title">${topicDetails.title}</div>
+                            <div class="task-meta">
+                                <span>⏱️ ${topicDetails.duration}</span>
+                                <span>🎯 ${topicDetails.questions}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                if(isCompleted) {
+                    completedList.insertAdjacentHTML('beforeend', cardHTML);
+                } else {
+                    todayList.insertAdjacentHTML('beforeend', cardHTML);
+                }
+            });
+        }
+
+        function toggleTask(id) {
+            if (completedTaskIds.includes(id)) {
+                completedTaskIds = completedTaskIds.filter(tid => tid !== id);
+            } else {
+                completedTaskIds.push(id);
+            }
+            saveState();
+            renderTodayTasks();
+            buildCalendar();
+        }
+
+        function checkMissedDays(todayStr) {
+            const telafiContainer = document.getElementById("telafi-container");
+            telafiContainer.innerHTML = "";
+            let missedCount = 0;
+
+            Object.keys(appSchedule).forEach(dateStr => {
+                if(dateStr < todayStr) {
+                    appSchedule[dateStr].forEach(ref => {
+                        if(!completedTaskIds.includes(ref.id)) missedCount++;
+                    });
+                }
+            });
+
+            if(missedCount > 0) {
+                telafiContainer.innerHTML = `
+                    <div class="telafi-banner">
+                        <div class="telafi-text">⚠️ Geçmiş günlerden tamamlanmamış ${missedCount} konu var! Planı yeniden dağıtalım.</div>
+                        <button class="btn-telafi" onclick="triggerReschedule()">Planı Yeniden Dağıt</button>
+                    </div>
+                `;
+            }
+        }
+
+        function triggerReschedule() {
+            const todayStr = getTodayDateStr();
+            let uncompletedRefs = [];
+
+            Object.keys(appSchedule).forEach(dateStr => {
+                if(dateStr <= todayStr) {
+                    appSchedule[dateStr] = appSchedule[dateStr].filter(ref => {
+                        if(!completedTaskIds.includes(ref.id)) {
+                            uncompletedRefs.push(ref);
+                            return false;
+                        }
+                        return true;
+                    });
+                }
+            });
+
+            let tomorrow = new Date(todayStr);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+
+            while(uncompletedRefs.length > 0) {
+                let futureDateStr = formatDate(tomorrow);
+                if(!appSchedule[futureDateStr]) appSchedule[futureDateStr] = [];
+                appSchedule[futureDateStr].push(uncompletedRefs.shift());
+                tomorrow.setDate(tomorrow.getDate() + 1);
+            }
+
+            saveState();
+            renderTodayTasks();
+            buildCalendar();
+            alert("Eksik konular kalan günlere dengeli şekilde dağıtıldı!");
+        }
+
+        function renderCurriculumProgress() {
+            const container = document.getElementById("curriculum-progress-container");
+            container.innerHTML = "";
+            const categories = [...new Set(ALL_TOPICS.map(t => t.category))];
+            
+            categories.forEach(cat => {
+                const catTopics = ALL_TOPICS.filter(t => t.category === cat);
+                const total = catTopics.length;
+                const completed = catTopics.filter(t => completedTaskIds.includes(t.id)).length;
+                const pct = Math.round((completed / total) * 100) || 0;
+
+                container.insertAdjacentHTML('beforeend', `
+                    <div class="category-row">
+                        <div class="category-info">
+                            <span>${cat}</span>
+                            <span style="color: var(--ios-text-sec);">${completed}/${total} (%${pct})</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" style="width: ${pct}%;"></div>
+                        </div>
+                    </div>
+                `);
+            });
+        }
+
+        function buildCalendar() {
+            const grid = document.getElementById("calendar-grid-container");
+            grid.innerHTML = "";
+            const weekdays = ["Pt", "Sa", "Ça", "Pe", "Cu", "Ct", "Pz"];
+            weekdays.forEach(w => grid.insertAdjacentHTML('beforeend', `<div class="calendar-header-cell">${w}</div>`));
+
+            let year = 2026, month = 4; // Mayıs
+            let firstDayIndex = new Date(year, month, 1).getDay();
+            if (firstDayIndex === 0) firstDayIndex = 7;
+
+            for(let i = 1; i < firstDayIndex; i++) {
+                grid.insertAdjacentHTML('beforeend', `<div class="calendar-day-cell"></div>`);
+            }
+
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            for(let day = 1; day <= daysInMonth; day++) {
+                let currentStr = `2026-05-${day.toString().padStart(2, '0')}`;
+                let tasks = appSchedule[currentStr] || [];
+                let dotClass = "";
+                
+                if(tasks.length > 0) {
+                    let allDone = tasks.every(ref => completedTaskIds.includes(ref.id));
+                    dotClass = allDone ? "dot-green" : "dot-orange";
+                }
+
+                let isToday = (day === 16);
+                grid.insertAdjacentHTML('beforeend', `
+                    <div class="calendar-day-cell ${isToday ? 'selected' : ''}" onclick="showDayDetails('${currentStr}', this)">
+                        ${day}
+                        ${dotClass ? `<div class="calendar-dot ${dotClass}"></div>` : ''}
+                    </div>
+                `);
+            }
+        }
+
+        function showDayDetails(dateStr, element) {
+            document.querySelectorAll('.calendar-day-cell').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected');
+            const container = document.getElementById("selected-day-tasks");
+            const dayTasks = appSchedule[dateStr] || [];
+
+            if(dayTasks.length === 0) {
+                container.innerHTML = `<div class="empty-state">Bu güne ait çalışma bulunmuyor.</div>`;
+                return;
+            }
+
+            container.innerHTML = "";
+            dayTasks.forEach(ref => {
+                const topicDetails = ALL_TOPICS.find(t => t.id === ref.id);
+                const isCompleted = completedTaskIds.includes(ref.id);
+                container.insertAdjacentHTML('beforeend', `
+                    <div class="task-card" style="box-shadow: none; border: 1px solid var(--ios-border);">
+                        <div class="task-details">
+                            <div class="task-category" style="color: ${isCompleted ? 'var(--ios-green)' : 'var(--ios-blue)'}">
+                                ${topicDetails.category} ${isCompleted ? '✓' : ''}
+                            </div>
+                            <div class="task-title">${topicDetails.title}</div>
+                            <div class="task-meta">⏱️ ${topicDetails.duration} | 🎯 ${topicDetails.questions}</div>
+                        </div>
+                    </div>
+                `);
+            });
+        }
+
+        function updateAIMotivation() {
+            const msgBox = document.getElementById("ai-motivation-text");
+            const total = ALL_TOPICS.length;
+            const done = completedTaskIds.length;
+            const pct = Math.round((done / total) * 100);
+
+            if(pct === 0) {
+                msgBox.innerText = "Yolculuk ilk adımla başlar! Bugünün konularını tamamlayarak harika bir başlangıç yapabilirsin.";
+            } else {
+                msgBox.innerText = `Harika! Müfredatın %${pct}'ini tamamladın. Yusuf da ilerleyişini canlı takip ediyor, disipline devam!`;
+            }
+        }
+
+        function switchTab(tabId, title) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+            document.getElementById(`view-${tabId}`).classList.add('active');
+            document.getElementById('page-title').innerText = title;
+            event.currentTarget.classList.add('active');
+        }
+
+        // PWA Servis İşçisi Kaydı
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js')
+                .then(() => console.log('PWA Servis Kartı Aktif.'))
+                .catch(err => console.log('SW Hatası:', err));
+            }
+        }
+    </script>
+</body>
+</html>
