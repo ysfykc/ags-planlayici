@@ -68,10 +68,22 @@
         .calendar-dot { height: 4px; width: 4px; border-radius: 50%; position: absolute; bottom: 4px; }
         .dot-green { background-color: var(--ios-green); }
         .dot-orange { background-color: var(--ios-orange); }
+        
+        /* Akordeon (İçindekiler) Stilleri */
         .category-row { background-color: var(--ios-card-bg); border-radius: 12px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
-        .category-info { display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+        .category-header { cursor: pointer; }
+        .category-info { display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; margin-bottom: 6px; align-items: center; }
         .progress-bar-bg { background-color: var(--ios-gray-bg); height: 8px; border-radius: 4px; overflow: hidden; }
         .progress-bar-fill { background-color: var(--ios-green); height: 100%; width: 0%; transition: width 0.3s ease; }
+        .topic-list { display: none; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--ios-border); }
+        .topic-list.expanded { display: block; }
+        .topic-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; font-size: 13px; color: var(--ios-text-main); border-bottom: 0.5px solid var(--ios-gray-bg); }
+        .topic-item:last-child { border-bottom: none; }
+        .topic-item.completed { color: var(--ios-green); font-weight: 500; }
+        .topic-icon { font-size: 14px; }
+        .chevron { transition: transform 0.3s; color: var(--ios-text-sec); font-size: 10px; display: inline-block; }
+        .chevron.open { transform: rotate(180deg); }
+
         .settings-group { background-color: var(--ios-card-bg); border-radius: 14px; margin-bottom: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
         .settings-row { padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 0.5px solid var(--ios-border); }
         .settings-row:last-child { border-bottom: none; }
@@ -125,6 +137,7 @@
 
         <div id="view-stats" class="view">
             <div class="section-title">Müfredat İlerleme Durumu</div>
+            <p style="font-size: 12px; color: var(--ios-text-sec); margin-bottom: 12px;">Detayları görmek için derslerin üzerine tıklayın.</p>
             <div id="curriculum-progress-container"></div>
         </div>
 
@@ -162,7 +175,7 @@
                 <span class="tab-icon">📅</span>
                 <span>Takvim</span>
             </div>
-            <div class="tab-item" onclick="switchTab('stats', 'İstatistik')">
+            <div class="tab-item" onclick="switchTab('stats', 'İlerleme')">
                 <span class="tab-icon">📊</span>
                 <span>İlerleme</span>
             </div>
@@ -189,8 +202,7 @@
         const db = firebase.firestore();
         let unsubscribe = null; 
 
-        // VERSİYON GÜNCELLEMESİ - Eski sıralamayı sıfırlayıp harmanlanmış düzeni kurar
-        const APP_VERSION = "1.4";
+        const APP_VERSION = "1.5";
 
         const ALL_TOPICS = [
             { id: 1, category: "AGS Sözel Yetenek", title: "Sözcükte Anlam", duration: "30 dk", questions: "20 Soru" },
@@ -270,7 +282,6 @@
             initCountdown();
             document.getElementById("joint-code-field").value = jointCode;
             
-            // Eğer versiyon değiştiyse eski planı sil (harmanlanmış planı oluşturmak için)
             if(localStorage.getItem("ags_version") !== APP_VERSION) {
                 localStorage.removeItem("ags_schedule");
                 localStorage.setItem("ags_version", APP_VERSION);
@@ -331,7 +342,7 @@
 
         function refreshUI() {
             renderTodayTasks();
-            renderCurriculumProgress();
+            renderCurriculumProgress(); // İÇİNDEKİLER BURADA GÜNCELLENİYOR
             buildCalendar();
             updateAIMotivation();
         }
@@ -343,15 +354,10 @@
             document.getElementById("countdown-display").innerText = `Son ${daysLeft} Gün`;
         }
 
-        // AKILLI HARMANLAMA ALGORİTMASI (Yeni)
         function generateInitialSchedule() {
             let startDate = new Date(); 
-            
-            // Konuları beyni yormayacak şekilde iki ayrı gruba bölelim
             let agirKonular = ALL_TOPICS.filter(t => t.category.includes("ÖABT") || t.category.includes("Eğitimin"));
             let hafifKonular = ALL_TOPICS.filter(t => !t.category.includes("ÖABT") && !t.category.includes("Eğitimin"));
-            
-            // Fermuar yöntemiyle bir ondan bir ondan alarak harmanlanmış liste oluşturalım
             let harmanlanmisListe = [];
             while(agirKonular.length > 0 || hafifKonular.length > 0) {
                 if(agirKonular.length > 0) harmanlanmisListe.push(agirKonular.shift());
@@ -362,14 +368,10 @@
             while(harmanlanmisListe.length > 0) {
                 let currentDateStr = toLocalDateString(startDate);
                 appSchedule[currentDateStr] = [];
-                
-                // Toplam 59 konuyu, günde çoğunlukla 1, bazen 2 konu olacak şekilde günlere yay
                 let pullCount = (dayCounter % 12 === 0 && harmanlanmisListe.length > 1) ? 2 : 1;
-                
                 for(let i=0; i<pullCount; i++) {
                     if(harmanlanmisListe.length > 0) appSchedule[currentDateStr].push({ id: harmanlanmisListe.shift().id });
                 }
-                
                 startDate.setDate(startDate.getDate() + 1);
                 dayCounter++;
             }
@@ -413,7 +415,6 @@
                 });
             }
 
-            // EKSTRA KONU BUTONU KONTROLÜ
             let hasFutureTasks = false;
             const sortedDates = Object.keys(appSchedule).sort();
             for(let d of sortedDates) {
@@ -432,7 +433,6 @@
             }
         }
 
-        // GELECEKTEN GÜNÜMÜZE KONU ÇEKME FONKSİYONU
         function pullFutureTaskToToday() {
             const todayStr = toLocalDateString(new Date());
             let foundTask = null;
@@ -447,7 +447,7 @@
                         if (!completedTaskIds.includes(t.id)) {
                             foundTask = t;
                             sourceDate = date;
-                            tasksOnDate.splice(i, 1); // Gelecekteki günden sil
+                            tasksOnDate.splice(i, 1); 
                             break;
                         }
                     }
@@ -457,7 +457,7 @@
 
             if (foundTask) {
                 if (!appSchedule[todayStr]) appSchedule[todayStr] = [];
-                appSchedule[todayStr].push(foundTask); // Bugüne ekle
+                appSchedule[todayStr].push(foundTask); 
                 localStorage.setItem("ags_schedule", JSON.stringify(appSchedule));
                 
                 const topicDetails = ALL_TOPICS.find(t => t.id === foundTask.id);
@@ -509,21 +509,55 @@
             alert("Eksik konular kalan günlere dengeli şekilde dağıtıldı!");
         }
 
+        // İÇİNDEKİLER BÖLÜMÜNÜ OLUŞTURAN FONKSİYON
         function renderCurriculumProgress() {
             const container = document.getElementById("curriculum-progress-container");
             container.innerHTML = "";
             const categories = [...new Set(ALL_TOPICS.map(t => t.category))];
-            categories.forEach(cat => {
+            
+            categories.forEach((cat, index) => {
                 const catTopics = ALL_TOPICS.filter(t => t.category === cat);
                 const total = catTopics.length;
                 const completed = catTopics.filter(t => completedTaskIds.includes(t.id)).length;
                 const pct = Math.round((completed / total) * 100) || 0;
+
+                // Akordeon içeriği (Alt konular)
+                let topicListHTML = `<div class="topic-list" id="topic-list-${index}">`;
+                catTopics.forEach(t => {
+                    const isDone = completedTaskIds.includes(t.id);
+                    topicListHTML += `
+                        <div class="topic-item ${isDone ? 'completed' : ''}">
+                            <span>${t.title}</span>
+                            <span class="topic-icon">${isDone ? '✅' : '⏳'}</span>
+                        </div>
+                    `;
+                });
+                topicListHTML += `</div>`;
+
+                // Ana başlık ve çubuk
                 container.insertAdjacentHTML('beforeend', `
                     <div class="category-row">
-                        <div class="category-info"><span>${cat}</span><span style="color: var(--ios-text-sec);">${completed}/${total} (%${pct})</span></div>
-                        <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${pct}%;"></div></div>
+                        <div class="category-header" onclick="toggleCategory(${index})">
+                            <div class="category-info">
+                                <span>${cat}</span>
+                                <div>
+                                    <span style="color: var(--ios-text-sec); margin-right: 8px;">${completed}/${total} (%${pct})</span>
+                                    <span class="chevron" id="chevron-${index}">▼</span>
+                                </div>
+                            </div>
+                            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${pct}%;"></div></div>
+                        </div>
+                        ${topicListHTML}
                     </div>`);
             });
+        }
+
+        // İçindekiler menüsünü açıp kapatma fonksiyonu
+        function toggleCategory(index) {
+            const list = document.getElementById(`topic-list-${index}`);
+            const chevron = document.getElementById(`chevron-${index}`);
+            list.classList.toggle('expanded');
+            chevron.classList.toggle('open');
         }
 
         function buildCalendar() {
