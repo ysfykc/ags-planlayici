@@ -58,8 +58,10 @@
         .telafi-text { font-size: 13px; color: #E65100; font-weight: 500; }
         .btn-telafi { background-color: var(--ios-orange); color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; align-self: flex-start; }
         
-        .btn-extra { width: 100%; padding: 14px; background-color: #E8F5E9; color: #2E7D32; border: 1px dashed #4CAF50; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; margin-top: 4px; margin-bottom: 12px; }
-        .btn-reset { width: 100%; padding: 14px; background-color: #FFEBEE; color: #C62828; border: 1px dashed #EF5350; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; margin-top: 12px; }
+        .btn-extra { width: 100%; padding: 14px; background-color: #E8F5E9; color: #2E7D32; border: 1px dashed #4CAF50; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; margin-top: 4px; margin-bottom: 12px; transition: background-color 0.2s; }
+        .btn-extra:active { background-color: #C8E6C9; }
+        
+        .btn-reset { width: 100%; padding: 14px; background-color: #FFEBEE; color: #C62828; border: 1px dashed #EF5350; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; margin-top: 12px; transition: background-color 0.2s; }
 
         /* Hata Kutusu Özel Stilleri */
         .btn-hata-ekle { width: 100%; padding: 16px; background-color: var(--ios-blue); color: white; border: none; border-radius: 14px; font-weight: 600; font-size: 15px; cursor: pointer; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,122,255,0.15); }
@@ -158,12 +160,12 @@
         <div id="view-hata" class="view">
             <div class="section-title">Hatalı Soru Havuzu</div>
             <button class="btn-hata-ekle" onclick="document.getElementById('camera-file-input').click()">
-                📸 Soru Fotoğrafı Çek / Ekle
+                📸 Fotoğraf Çek / Galeriden Seç
             </button>
-            <input type="file" id="camera-file-input" accept="image/*" capture="environment" style="display:none;" onchange="processCapturedQuestion(this)">
+            <input type="file" id="camera-file-input" accept="image/*" style="display:none;" onchange="processCapturedQuestion(this)">
             
             <div id="hata-sorular-list">
-                <div class="empty-state">Henüz hatalı soru eklenmemiş. Yanlış çözdüğün soruların fotoğrafını çekerek burada biriktirebilirsin! 🎯</div>
+                <div class="empty-state">Henüz hatalı soru eklenmemiş. Yanlış çözdüğün soruları ekleyerek burada biriktirebilirsin! 🎯</div>
             </div>
         </div>
 
@@ -231,6 +233,7 @@
         let unsubscribeTasks = null; 
         let unsubscribeHata = null;
 
+        // VERSİYON DEĞİŞTİRİLMEDİ (TAKViMİNİZ VE TİKLERİNİZ SIFIRLANMASIN DİYE)
         const APP_VERSION = "1.9";
 
         const ALL_TOPICS = [
@@ -303,7 +306,6 @@
         // --- ⚙️ GECE 03:00 GÜN DÖNÜMÜ HESAPLAMASI ---
         function getWorkingDate() {
             let d = new Date();
-            // Eğer saat gece 00:00 ile 02:59 arasındaysa dünü hedef al
             if (d.getHours() < 3) {
                 d.setDate(d.getDate() - 1);
             }
@@ -345,7 +347,6 @@
             syncStatus.innerText = "Bağlanıyor...";
             syncStatus.className = "sync-status";
 
-            // Görev dinleyicisi
             unsubscribeTasks = db.collection("ags_tracker").doc(jointCode).onSnapshot((doc) => {
                 if (doc.exists) {
                     completedTaskIds = doc.data().completed || [];
@@ -360,7 +361,6 @@
                 syncStatus.innerText = "Bağlantı Hatası!";
             });
 
-            // Hata Kutusu dinleyicisi (Mevcut kuralları aşmak için aynı ağacın altında subcollection olarak açıldı)
             unsubscribeHata = db.collection("ags_tracker").doc(jointCode).collection("hata_kutusu")
                 .orderBy("createdAt", "desc").onSnapshot((snapshot) => {
                     renderHataList(snapshot);
@@ -438,7 +438,7 @@
         }
 
         function renderTodayTasks() {
-            const todayStr = toLocalDateString(getWorkingDate()); // Çalışma gününe göre çağır
+            const todayStr = toLocalDateString(getWorkingDate()); 
             const todayList = document.getElementById("today-tasks-list");
             const completedList = document.getElementById("completed-tasks-list");
             const extraContainer = document.getElementById("extra-task-container");
@@ -606,16 +606,14 @@
             document.getElementById(`chevron-${index}`).classList.toggle('open');
         }
 
-        // --- 📸 HATA KUTUSU İŞLEME VE DOSYA SIKIŞTIRMA ALGORİTMASI ---
         function processCapturedQuestion(input) {
             if (input.files && input.files[0]) {
-                document.getElementById("ai-scanner-overlay").style.display = "flex"; // Yükleniyor aç
+                document.getElementById("ai-scanner-overlay").style.display = "flex"; 
                 
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const img = new Image();
                     img.onload = function() {
-                        // Firebase kotasını korumak için Canvas ile görseli 600px genişliğe küçültüyoruz
                         const canvas = document.createElement("canvas");
                         const MAX_WIDTH = 600;
                         const scale = MAX_WIDTH / img.width;
@@ -625,9 +623,8 @@
                         const ctx = canvas.getContext("2d");
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                         
-                        const base64Image = canvas.toDataURL("image/jpeg", 0.7); // Sıkıştırılmış veri
+                        const base64Image = canvas.toDataURL("image/jpeg", 0.7); 
                         
-                        // Yapay zeka taramasını simüle etmek için 2.5 saniye bekletiyoruz
                         setTimeout(() => {
                             db.collection("ags_tracker").doc(jointCode).collection("hata_kutusu").add({
                                 image: base64Image,
@@ -635,7 +632,7 @@
                                 dateStr: toLocalDateString(getWorkingDate())
                             }).then(() => {
                                 document.getElementById("ai-scanner-overlay").style.display = "none";
-                                input.value = ""; // Inputu sıfırla
+                                input.value = ""; 
                             });
                         }, 2500);
                     };
@@ -648,7 +645,7 @@
         function renderHataList(snapshot) {
             const container = document.getElementById("hata-sorular-list");
             if (snapshot.empty) {
-                container.innerHTML = `<div class="empty-state">Henüz hatalı soru eklenmemiş. Yanlış çözdüğün soruların fotoğrafını çekerek burada biriktirebilirsin! 🎯</div>`;
+                container.innerHTML = `<div class="empty-state">Henüz hatalı soru eklenmemiş. Yanlış çözdüğün soruları ekleyerek burada biriktirebilirsin! 🎯</div>`;
                 return;
             }
             container.innerHTML = "";
