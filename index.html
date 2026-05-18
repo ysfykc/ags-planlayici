@@ -66,7 +66,7 @@
         /* Hata Kutusu Özel Stilleri */
         .btn-hata-ekle { width: 100%; padding: 16px; background-color: var(--ios-blue); color: white; border: none; border-radius: 14px; font-weight: 600; font-size: 15px; cursor: pointer; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,122,255,0.15); }
         .hata-card { background: var(--ios-card-bg); border-radius: 16px; overflow: hidden; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); border: 0.5px solid var(--ios-border); }
-        .hata-img-wrapper { width: 100%; max-height: 250px; overflow: hidden; background: #E5E5EA; display: flex; align-items: center; justify-content: center; }
+        .hata-img-wrapper { width: 100%; max-height: 250px; overflow: hidden; background: #E5E5EA; display: flex; align-items: center; justify-content: center; cursor: zoom-in; }
         .hata-img { width: 100%; height: auto; object-fit: cover; }
         .hata-content { padding: 14px; }
         .hata-date { font-size: 11px; color: var(--ios-text-sec); margin-bottom: 6px; }
@@ -75,6 +75,11 @@
         .ai-loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 1000; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
         .spinner { width: 40px; height: 40px; border: 4px solid var(--ios-border); border-top-color: var(--ios-blue); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Lightbox (Tam Ekran Fotoğraf) Stilleri */
+        .lightbox-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 3000; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); cursor: zoom-out; }
+        .lightbox-img { max-width: 100%; max-height: 90vh; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); object-fit: contain; }
+        .lightbox-close-btn { position: absolute; top: 24px; right: 24px; background: rgba(255,255,255,0.2); border: none; color: white; width: 40px; height: 40px; border-radius: 20px; font-size: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(10px); }
 
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; background-color: var(--ios-card-bg); border-radius: 14px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
         .calendar-header-cell { font-size: 11px; font-weight: 600; color: var(--ios-text-sec); text-align: center; padding-bottom: 8px; }
@@ -102,6 +107,7 @@
         .settings-row:last-child { border-bottom: none; }
         .settings-label { font-size: 15px; font-weight: 500; }
         .joint-code-input { border: 1px solid var(--ios-border); border-radius: 8px; padding: 6px 10px; font-size: 14px; text-align: center; text-transform: uppercase; width: 120px; font-weight: 600; color: var(--ios-blue); }
+        .btn-save { background: var(--ios-blue); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 600; cursor: pointer;}
         .tab-bar { position: fixed; bottom: 0; width: 100%; max-width: 430px; background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 0.5px solid var(--ios-border); display: flex; height: 65px; padding-bottom: env(safe-area-inset-bottom); z-index: 200; }
         .tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--ios-text-sec); font-size: 10px; font-weight: 500; cursor: pointer; gap: 3px; }
         .tab-item.active { color: var(--ios-blue); }
@@ -110,6 +116,11 @@
     </style>
 </head>
 <body>
+
+    <div id="image-lightbox" class="lightbox-overlay" onclick="closeLightbox()">
+        <button class="lightbox-close-btn">✕</button>
+        <img id="lightbox-full-img" class="lightbox-img" src="">
+    </div>
 
     <div id="ai-scanner-overlay" class="ai-loading-overlay">
         <div class="spinner"></div>
@@ -233,7 +244,6 @@
         let unsubscribeTasks = null; 
         let unsubscribeHata = null;
 
-        // VERSİYON DEĞİŞTİRİLMEDİ (TAKViMİNİZ VE TİKLERİNİZ SIFIRLANMASIN DİYE)
         const APP_VERSION = "1.9";
 
         const ALL_TOPICS = [
@@ -303,7 +313,6 @@
         let completedTaskIds = [];
         let jointCode = localStorage.getItem("ags_joint_code") || "EV-CZD26";
 
-        // --- ⚙️ GECE 03:00 GÜN DÖNÜMÜ HESAPLAMASI ---
         function getWorkingDate() {
             let d = new Date();
             if (d.getHours() < 3) {
@@ -651,10 +660,11 @@
             container.innerHTML = "";
             snapshot.forEach(doc => {
                 const data = doc.data();
+                // FOTOĞRAFA TIKLAYINCA ARTIK LİGHTBOX AÇILACAK
                 container.insertAdjacentHTML('beforeend', `
                     <div class="hata-card">
                         <div class="hata-img-wrapper">
-                            <img src="${data.image}" class="hata-img" onclick="window.open(this.src)">
+                            <img src="${data.image}" class="hata-img" onclick="openLightbox(this.src)">
                         </div>
                         <div class="hata-content">
                             <div class="hata-date">📅 Ekleme Tarihi: ${data.dateStr || ''}</div>
@@ -664,6 +674,17 @@
                     </div>
                 `);
             });
+        }
+
+        // --- LİGHTBOX FONKSİYONLARI ---
+        function openLightbox(src) {
+            document.getElementById('lightbox-full-img').src = src;
+            document.getElementById('image-lightbox').style.display = 'flex';
+        }
+
+        function closeLightbox() {
+            document.getElementById('image-lightbox').style.display = 'none';
+            document.getElementById('lightbox-full-img').src = '';
         }
 
         function deleteHataQuestion(docId) {
