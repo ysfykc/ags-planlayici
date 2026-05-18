@@ -58,10 +58,21 @@
         .telafi-text { font-size: 13px; color: #E65100; font-weight: 500; }
         .btn-telafi { background-color: var(--ios-orange); color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; align-self: flex-start; }
         
-        .btn-extra { width: 100%; padding: 14px; background-color: #E8F5E9; color: #2E7D32; border: 1px dashed #4CAF50; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; margin-top: 4px; margin-bottom: 12px; transition: background-color 0.2s; }
-        .btn-extra:active { background-color: #C8E6C9; }
-        
-        .btn-reset { width: 100%; padding: 14px; background-color: #FFEBEE; color: #C62828; border: 1px dashed #EF5350; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; margin-top: 12px; transition: background-color 0.2s; }
+        .btn-extra { width: 100%; padding: 14px; background-color: #E8F5E9; color: #2E7D32; border: 1px dashed #4CAF50; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; margin-top: 4px; margin-bottom: 12px; }
+        .btn-reset { width: 100%; padding: 14px; background-color: #FFEBEE; color: #C62828; border: 1px dashed #EF5350; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; margin-top: 12px; }
+
+        /* Hata Kutusu Özel Stilleri */
+        .btn-hata-ekle { width: 100%; padding: 16px; background-color: var(--ios-blue); color: white; border: none; border-radius: 14px; font-weight: 600; font-size: 15px; cursor: pointer; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,122,255,0.15); }
+        .hata-card { background: var(--ios-card-bg); border-radius: 16px; overflow: hidden; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); border: 0.5px solid var(--ios-border); }
+        .hata-img-wrapper { width: 100%; max-height: 250px; overflow: hidden; background: #E5E5EA; display: flex; align-items: center; justify-content: center; }
+        .hata-img { width: 100%; height: auto; object-fit: cover; }
+        .hata-content { padding: 14px; }
+        .hata-date { font-size: 11px; color: var(--ios-text-sec); margin-bottom: 6px; }
+        .hata-status-badge { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; background: #FFF3E0; color: #E65100; margin-bottom: 8px; }
+        .btn-hata-sil { background: #FFEBEE; color: var(--ios-red); border: none; padding: 8px 12px; border-radius: 8px; font-weight: 600; font-size: 12px; cursor: pointer; width: 100%; margin-top: 10px; }
+        .ai-loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 1000; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid var(--ios-border); border-top-color: var(--ios-blue); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; background-color: var(--ios-card-bg); border-radius: 14px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
         .calendar-header-cell { font-size: 11px; font-weight: 600; color: var(--ios-text-sec); text-align: center; padding-bottom: 8px; }
@@ -89,15 +100,20 @@
         .settings-row:last-child { border-bottom: none; }
         .settings-label { font-size: 15px; font-weight: 500; }
         .joint-code-input { border: 1px solid var(--ios-border); border-radius: 8px; padding: 6px 10px; font-size: 14px; text-align: center; text-transform: uppercase; width: 120px; font-weight: 600; color: var(--ios-blue); }
-        .btn-save { background: var(--ios-blue); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 600; cursor: pointer;}
         .tab-bar { position: fixed; bottom: 0; width: 100%; max-width: 430px; background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 0.5px solid var(--ios-border); display: flex; height: 65px; padding-bottom: env(safe-area-inset-bottom); z-index: 200; }
         .tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--ios-text-sec); font-size: 10px; font-weight: 500; cursor: pointer; gap: 3px; }
         .tab-item.active { color: var(--ios-blue); }
-        .tab-icon { font-size: 20px; }
+        .tab-icon { font-size: 19px; }
         .empty-state { padding: 40px 16px; text-align: center; color: var(--ios-text-sec); font-size: 14px; }
     </style>
 </head>
 <body>
+
+    <div id="ai-scanner-overlay" class="ai-loading-overlay">
+        <div class="spinner"></div>
+        <div style="font-weight: 600; font-size: 15px; color: var(--ios-blue);">🤖 Yapay Zeka Tarama Yapıyor...</div>
+        <div style="font-size: 12px; color: var(--ios-text-sec); text-align:center; padding: 0 32px;">Görsel analiz ediliyor, soru metni çözümleniyor ve dijital Hata Havuzunuza işleniyor.</div>
+    </div>
 
     <div class="app-container">
         <header>
@@ -119,9 +135,7 @@
             <div id="telafi-container"></div>
             <div class="section-title">Bugünün Çalışma Planı</div>
             <div id="today-tasks-list"></div>
-            
             <div id="extra-task-container"></div>
-            
             <div class="section-title" style="margin-top: 16px;">Tamamlananlar</div>
             <div id="completed-tasks-list"></div>
         </div>
@@ -139,6 +153,18 @@
             <div class="section-title">Müfredat İlerleme Durumu</div>
             <p style="font-size: 12px; color: var(--ios-text-sec); margin-bottom: 12px;">Dersleri açıp kapatmak için üzerlerine dokunun. Konuları buradan da direkt bitirebilirsiniz.</p>
             <div id="curriculum-progress-container"></div>
+        </div>
+
+        <div id="view-hata" class="view">
+            <div class="section-title">Hatalı Soru Havuzu</div>
+            <button class="btn-hata-ekle" onclick="document.getElementById('camera-file-input').click()">
+                📸 Soru Fotoğrafı Çek / Ekle
+            </button>
+            <input type="file" id="camera-file-input" accept="image/*" capture="environment" style="display:none;" onchange="processCapturedQuestion(this)">
+            
+            <div id="hata-sorular-list">
+                <div class="empty-state">Henüz hatalı soru eklenmemiş. Yanlış çözdüğün soruların fotoğrafını çekerek burada biriktirebilirsin! 🎯</div>
+            </div>
         </div>
 
         <div id="view-settings" class="view">
@@ -162,7 +188,6 @@
             </div>
             
             <button class="btn-reset" onclick="hardResetSchedule()">Takvimi Yeniden Oluştur (Sıfırla)</button>
-            <p style="font-size: 11px; color: var(--ios-text-sec); text-align: center; margin-top: 8px;">Takvim şaşarsa veya cihazlar arası farklı görünürse basın. Atılan tikler silinmez.</p>
         </div>
 
         <nav class="tab-bar">
@@ -177,6 +202,10 @@
             <div class="tab-item" onclick="switchTab('stats', 'İstatistik')">
                 <span class="tab-icon">📊</span>
                 <span>İlerleme</span>
+            </div>
+            <div class="tab-item" onclick="switchTab('hata', 'Hata Kutusu')">
+                <span class="tab-icon">❌</span>
+                <span>Hata Kutusu</span>
             </div>
             <div class="tab-item" onclick="switchTab('settings', 'Ayarlar')">
                 <span class="tab-icon">⚙️</span>
@@ -199,39 +228,32 @@
         
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        let unsubscribe = null; 
+        let unsubscribeTasks = null; 
+        let unsubscribeHata = null;
 
-        // VERSİYON 1.8 - AKILLI SÜRE VE ÖNEM YAPILANDIRMASI
-        const APP_VERSION = "1.8";
+        const APP_VERSION = "1.9";
 
         const ALL_TOPICS = [
-            // AGS SÖZEL YETENEK (Önem Derecesine Göre Süre/Soru Ayarı)
             { id: 1, category: "AGS Sözel Yetenek", title: "Sözcükte Anlam", duration: "30 dk", questions: "15 Soru" },
             { id: 2, category: "AGS Sözel Yetenek", title: "Cümlede Anlam", duration: "35 dk", questions: "20 Soru" },
             { id: 3, category: "AGS Sözel Yetenek", title: "Anlatımın Oluşması", duration: "30 dk", questions: "15 Soru" },
             { id: 4, category: "AGS Sözel Yetenek", title: "Paragrafta Anlam [Kritik Önem]", duration: "55 dk", questions: "35 Soru" },
             { id: 5, category: "AGS Sözel Yetenek", title: "Sözel Mantık [Kritik Önem]", duration: "50 dk", questions: "20 Soru" },
-            
-            // AGS SAYISAL YETENEK
             { id: 6, category: "AGS Sayısal Yetenek", title: "Temel Matematik Kuralları", duration: "45 dk", questions: "15 Soru" },
             { id: 7, category: "AGS Sayısal Yetenek", title: "Grafik ve Tablo Yorumlama [Yüksek Önem]", duration: "50 dk", questions: "25 Soru" },
             { id: 8, category: "AGS Sayısal Yetenek", title: "Mantıksal Muhakeme Problemleri", duration: "50 dk", questions: "20 Soru" },
-            
-            // AGS TARİH
             { id: 9, category: "AGS Tarih", title: "İslamiyet Öncesi Türk Tarihi", duration: "25 dk", questions: "15 Soru" },
             { id: 10, category: "AGS Tarih", title: "Türk İslam Devletleri", duration: "30 dk", questions: "15 Soru" },
             { id: 11, category: "AGS Tarih", title: "Osmanlı Kuruluş Dönemi", duration: "25 dk", questions: "10 Soru" },
             { id: 12, category: "AGS Tarih", title: "Osmanlı Yükselme Dönemi", duration: "30 dk", questions: "15 Soru" },
             { id: 13, category: "AGS Tarih", title: "Osmanlı Duraklama Dönemi", duration: "25 dk", questions: "10 Soru" },
             { id: 14, category: "AGS Tarih", title: "Osmanlı Gerileme Dönemi", duration: "25 dk", questions: "10 Soru" },
-            { id: 15, category: "AGS Tarih", title: "Osmanlı Kültür ve Medeniyeti [Çok Yüksek Önem]", duration: "65 dk", questions: "35 Soru" },
+            { id: 15, category: "AGS Tarih", title: "Osmanlı Culture ve Medeniyeti [Çok Yüksek Önem]", duration: "65 dk", questions: "35 Soru" },
             { id: 16, category: "AGS Tarih", title: "XX. Yüzyılda Osmanlı Devleti", duration: "40 dk", questions: "20 Soru" },
             { id: 17, category: "AGS Tarih", title: "Milli Mücadele Dönemi [Çok Yüksek Önem]", duration: "70 dk", questions: "40 Soru" },
             { id: 18, category: "AGS Tarih", title: "Atatürk İlkeleri", duration: "25 dk", questions: "15 Soru" },
             { id: 19, category: "AGS Tarih", title: "Atatürk Dönemi Türkiye Dış Politikası", duration: "30 dk", questions: "15 Soru" },
             { id: 20, category: "AGS Tarih", title: "Çağdaş Türk ve Dünya Tarihi", duration: "35 dk", questions: "15 Soru" },
-            
-            // AGS COĞRAFYA
             { id: 21, category: "AGS Coğrafya", title: "Türkiye'nin Coğrafi Konumu ve Jeopolitiği", duration: "30 dk", questions: "15 Soru" },
             { id: 22, category: "AGS Coğrafya", title: "Türkiye'nin Jeolojik Geçmişi ve Yer Şekilleri [Yüksek Önem]", duration: "50 dk", questions: "25 Soru" },
             { id: 23, category: "AGS Coğrafya", title: "Türkiye'de Dış Kuvvetler", duration: "35 dk", questions: "15 Soru" },
@@ -242,14 +264,10 @@
             { id: 28, category: "AGS Coğrafya", title: "Türkiye'de Madenler ve Enerji Kaynakları", duration: "40 dk", questions: "20 Soru" },
             { id: 29, category: "AGS Coğrafya", title: "Türkiye'de Sanayi, Ulaşım, Turizm ve Ticaret [Yüksek Önem]", duration: "55 dk", questions: "30 Soru" },
             { id: 30, category: "AGS Coğrafya", title: "Türkiye'de Bölge Sınıflandırması ve Kalkınma Projeleri", duration: "30 dk", questions: "15 Soru" },
-            
-            // AGS MEVZUAT
             { id: 31, category: "AGS Mevzuat", title: "T.C. Anayasası (2709 Sayılı Kanun) [Yüksek Önem]", duration: "55 dk", questions: "25 Soru" },
             { id: 32, category: "AGS Mevzuat", title: "1739 Sayılı Milli Eğitim Temel Kanunu", duration: "35 dk", questions: "15 Soru" },
             { id: 33, category: "AGS Mevzuat", title: "222 Sayılı İlköğretim ve Eğitim Kanunu", duration: "30 dk", questions: "15 Soru" },
             { id: 34, category: "AGS Mevzuat", title: "7528 Sayılı Öğretmenlik Mesleği Kanunu", duration: "30 dk", questions: "15 Soru" },
-            
-            // EĞİTİMİN TEMELLERİ
             { id: 35, category: "Eğitimin Temelleri", title: "Eğitim Biliminin Genel Kavramları ve Süreçleri", duration: "35 dk", questions: "15 Soru" },
             { id: 36, category: "Eğitimin Temelleri", title: "Eğitimin Tarihi, Felsefi ve Toplumsal Temelleri", duration: "40 dk", questions: "15 Soru" },
             { id: 37, category: "Eğitimin Temelleri", title: "Eğitimin Psikolojik, Ekonomik ve Politik Temelleri", duration: "40 dk", questions: "15 Soru" },
@@ -257,13 +275,11 @@
             { id: 39, category: "Eğitimin Temelleri", title: "Türkiye Yüzyılı Maarif Modeli Yapısı [Yeni & Kritik]", duration: "55 dk", questions: "30 Soru" },
             { id: 40, category: "Eğitimin Temelleri", title: "Eğitim ve Öğretimde Etik İlkeler", duration: "20 dk", questions: "10 Soru" },
             { id: 41, category: "Eğitimin Temelleri", title: "Eğitim ve Öğretim Teknolojileri", duration: "30 dk", questions: "15 Soru" },
-            { id: 42, category: "Eğitimin Temelleri", title: "Öğrenmeyi Etkileyen Faktörler & Klasik Koşullanma", duration: "40 dk", questions: "20 Soru" },
+            { id: 42, category: "Eğitimin Temelleri", title: "Öğrenmeyi Etkileyen Faktörler", duration: "40 dk", questions: "20 Soru" },
             { id: 43, category: "Eğitimin Temelleri", title: "Piaget'nin Bilişsel Gelişim Kuramı [Kritik Önem]", duration: "55 dk", questions: "25 Soru" },
             { id: 44, category: "Eğitimin Temelleri", title: "Öğrenme Kuramları ve Değerlendirme [Yüksek Önem]", duration: "50 dk", questions: "25 Soru" },
             { id: 45, category: "Eğitimin Temelleri", title: "Rehberlik & Gelişim Psikolojisi Giriş", duration: "40 dk", questions: "15 Soru" },
             { id: 46, category: "Eğitimin Temelleri", title: "Sınıf Yönetimi & Program Okuryazarlığı", duration: "35 dk", questions: "15 Soru" },
-            
-            // OKUL ÖNCESİ ÖABT (Katsayısı En Yüksek Havuz)
             { id: 47, category: "Okul Öncesi ÖABT", title: "Erken Çocukluk Eğitimine Giriş", duration: "45 dk", questions: "20 Soru" },
             { id: 48, category: "Okul Öncesi ÖABT", title: "Çocuk Sağlığı ve İlk Yardım", duration: "40 dk", questions: "20 Soru" },
             { id: 49, category: "Okul Öncesi ÖABT", title: "Erken Çocukluk Döneminde Gelişim [Hayati Önem]", duration: "75 dk", questions: "40 Soru" },
@@ -283,6 +299,16 @@
         let appSchedule = {};
         let completedTaskIds = [];
         let jointCode = localStorage.getItem("ags_joint_code") || "EV-CZD26";
+
+        // --- ⚙️ GECE 03:00 GÜN DÖNÜMÜ HESAPLAMASI ---
+        function getWorkingDate() {
+            let d = new Date();
+            // Eğer saat gece 00:00 ile 02:59 arasındaysa dünü hedef al
+            if (d.getHours() < 3) {
+                d.setDate(d.getDate() - 1);
+            }
+            return d;
+        }
 
         function toLocalDateString(dateObj) {
             const year = dateObj.getFullYear();
@@ -312,12 +338,15 @@
         });
 
         function listenToFirebase() {
-            if (unsubscribe) unsubscribe();
+            if (unsubscribeTasks) unsubscribeTasks();
+            if (unsubscribeHata) unsubscribeHata();
+            
             const syncStatus = document.getElementById("sync-indicator");
             syncStatus.innerText = "Bağlanıyor...";
             syncStatus.className = "sync-status";
 
-            unsubscribe = db.collection("ags_tracker").doc(jointCode).onSnapshot((doc) => {
+            // Görev dinleyicisi
+            unsubscribeTasks = db.collection("ags_tracker").doc(jointCode).onSnapshot((doc) => {
                 if (doc.exists) {
                     completedTaskIds = doc.data().completed || [];
                 } else {
@@ -328,9 +357,14 @@
                 syncStatus.className = "sync-status online";
                 refreshUI();
             }, (error) => {
-                console.log("Firebase Hatası: ", error);
                 syncStatus.innerText = "Bağlantı Hatası!";
             });
+
+            // Hata Kutusu dinleyicisi (Mevcut kuralları aşmak için aynı ağacın altında subcollection olarak açıldı)
+            unsubscribeHata = db.collection("ags_tracker").doc(jointCode).collection("hata_kutusu")
+                .orderBy("createdAt", "desc").onSnapshot((snapshot) => {
+                    renderHataList(snapshot);
+                });
         }
 
         function toggleTask(id) {
@@ -381,7 +415,6 @@
 
         function generateInitialSchedule() {
             let startDate = new Date(2026, 4, 17); 
-            
             let agirKonular = ALL_TOPICS.filter(t => t.category.includes("ÖABT") || t.category.includes("Eğitimin"));
             let hafifKonular = ALL_TOPICS.filter(t => !t.category.includes("ÖABT") && !t.category.includes("Eğitimin"));
             let harmanlanmisListe = [];
@@ -405,14 +438,12 @@
         }
 
         function renderTodayTasks() {
-            const todayStr = toLocalDateString(new Date());
+            const todayStr = toLocalDateString(getWorkingDate()); // Çalışma gününe göre çağır
             const todayList = document.getElementById("today-tasks-list");
             const completedList = document.getElementById("completed-tasks-list");
             const extraContainer = document.getElementById("extra-task-container");
             
-            todayList.innerHTML = ""; 
-            completedList.innerHTML = "";
-            extraContainer.innerHTML = "";
+            todayList.innerHTML = ""; completedList.innerHTML = ""; extraContainer.innerHTML = "";
 
             checkMissedDays(todayStr);
             const todaysTaskRefs = appSchedule[todayStr] || [];
@@ -451,18 +482,13 @@
             }
 
             if(hasFutureTasks) {
-                extraContainer.innerHTML = `
-                    <button class="btn-extra" onclick="pullFutureTaskToToday()">
-                        ➕ Vaktim Var, Yeni Konu Ver (Öne Çek)
-                    </button>
-                `;
+                extraContainer.innerHTML = `<button class="btn-extra" onclick="pullFutureTaskToToday()">➕ Vaktim Var, Yeni Konu Ver (Öne Çek)</button>`;
             }
         }
 
         function pullFutureTaskToToday() {
-            const todayStr = toLocalDateString(new Date());
+            const todayStr = toLocalDateString(getWorkingDate());
             let foundTask = null;
-
             const sortedDates = Object.keys(appSchedule).sort();
             for (let date of sortedDates) {
                 if (date > todayStr) {
@@ -478,7 +504,6 @@
                     if (foundTask) break;
                 }
             }
-
             if (foundTask) {
                 if (!appSchedule[todayStr]) appSchedule[todayStr] = [];
                 appSchedule[todayStr].push(foundTask); 
@@ -506,9 +531,8 @@
         }
 
         function triggerReschedule() {
-            const todayStr = toLocalDateString(new Date());
+            const todayStr = toLocalDateString(getWorkingDate());
             let uncompletedRefs = [];
-            
             Object.keys(appSchedule).forEach(dateStr => {
                 if(dateStr < todayStr) {
                     appSchedule[dateStr] = appSchedule[dateStr].filter(ref => {
@@ -517,8 +541,7 @@
                     });
                 }
             });
-
-            let tomorrow = new Date();
+            let tomorrow = getWorkingDate();
             tomorrow.setDate(tomorrow.getDate() + 1);
             while(uncompletedRefs.length > 0) {
                 let futureDateStr = toLocalDateString(tomorrow);
@@ -546,7 +569,7 @@
                 catTopics.forEach(t => {
                     const isDone = completedTaskIds.includes(t.id);
                     topicListHTML += `
-                        <div class="topic-item ${isDone ? 'completed' : ''}" style="padding: 12px 0;">
+                        <div class="topic-item ${isDone ? 'completed' : ''}">
                             <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
                                 <div style="display:flex; align-items:center; gap:10px;">
                                     <label class="checkbox-container" style="margin-top:0;">
@@ -557,8 +580,7 @@
                                 </div>
                                 <span style="font-size:11px; color:var(--ios-text-sec); margin-right:10px;">⏱️ ${t.duration}</span>
                             </div>
-                        </div>
-                    `;
+                        </div>`;
                 });
                 topicListHTML += `</div>`;
 
@@ -579,12 +601,78 @@
             });
         }
 
-        // Akordeon açıp kapatma fonksiyonu
         function toggleCategory(index) {
-            const list = document.getElementById(`topic-list-${index}`);
-            const chevron = document.getElementById(`chevron-${index}`);
-            list.classList.toggle('expanded');
-            chevron.classList.toggle('open');
+            document.getElementById(`topic-list-${index}`).classList.toggle('expanded');
+            document.getElementById(`chevron-${index}`).classList.toggle('open');
+        }
+
+        // --- 📸 HATA KUTUSU İŞLEME VE DOSYA SIKIŞTIRMA ALGORİTMASI ---
+        function processCapturedQuestion(input) {
+            if (input.files && input.files[0]) {
+                document.getElementById("ai-scanner-overlay").style.display = "flex"; // Yükleniyor aç
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        // Firebase kotasını korumak için Canvas ile görseli 600px genişliğe küçültüyoruz
+                        const canvas = document.createElement("canvas");
+                        const MAX_WIDTH = 600;
+                        const scale = MAX_WIDTH / img.width;
+                        canvas.width = MAX_WIDTH;
+                        canvas.height = img.height * scale;
+                        
+                        const ctx = canvas.getContext("2d");
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        
+                        const base64Image = canvas.toDataURL("image/jpeg", 0.7); // Sıkıştırılmış veri
+                        
+                        // Yapay zeka taramasını simüle etmek için 2.5 saniye bekletiyoruz
+                        setTimeout(() => {
+                            db.collection("ags_tracker").doc(jointCode).collection("hata_kutusu").add({
+                                image: base64Image,
+                                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                                dateStr: toLocalDateString(getWorkingDate())
+                            }).then(() => {
+                                document.getElementById("ai-scanner-overlay").style.display = "none";
+                                input.value = ""; // Inputu sıfırla
+                            });
+                        }, 2500);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function renderHataList(snapshot) {
+            const container = document.getElementById("hata-sorular-list");
+            if (snapshot.empty) {
+                container.innerHTML = `<div class="empty-state">Henüz hatalı soru eklenmemiş. Yanlış çözdüğün soruların fotoğrafını çekerek burada biriktirebilirsin! 🎯</div>`;
+                return;
+            }
+            container.innerHTML = "";
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                container.insertAdjacentHTML('beforeend', `
+                    <div class="hata-card">
+                        <div class="hata-img-wrapper">
+                            <img src="${data.image}" class="hata-img" onclick="window.open(this.src)">
+                        </div>
+                        <div class="hata-content">
+                            <div class="hata-date">📅 Ekleme Tarihi: ${data.dateStr || ''}</div>
+                            <div class="hata-status-badge">⏳ Tekrar Çözülmeyi Bekliyor</div>
+                            <button class="btn-hata-sil" onclick="deleteHataQuestion('${doc.id}')">✓ Doğru Çözdüm (Havuzdan Kaldır)</button>
+                        </div>
+                    </div>
+                `);
+            });
+        }
+
+        function deleteHataQuestion(docId) {
+            if(confirm("Bu soruyu başarıyla çözdün mü? Havuzdan kaldırılacak.")) {
+                db.collection("ags_tracker").doc(jointCode).collection("hata_kutusu").doc(docId).delete();
+            }
         }
 
         function buildCalendar() {
@@ -599,7 +687,7 @@
             for(let i = 1; i < firstDayIndex; i++) grid.insertAdjacentHTML('beforeend', `<div class="calendar-day-cell"></div>`);
 
             const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const todayStr = toLocalDateString(new Date());
+            const todayStr = toLocalDateString(getWorkingDate());
 
             for(let day = 1; day <= daysInMonth; day++) {
                 let currentStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -616,7 +704,6 @@
                         ${day} ${dotClass ? `<div class="calendar-dot ${dotClass}"></div>` : ''}
                     </div>`);
             }
-            
             renderSelectedDayTasks(todayStr);
         }
 
