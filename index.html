@@ -60,6 +60,8 @@
         
         .btn-extra { width: 100%; padding: 14px; background-color: #E8F5E9; color: #2E7D32; border: 1px dashed #4CAF50; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; margin-top: 4px; margin-bottom: 12px; transition: background-color 0.2s; }
         .btn-extra:active { background-color: #C8E6C9; }
+        
+        .btn-reset { width: 100%; padding: 14px; background-color: #FFEBEE; color: #C62828; border: 1px dashed #EF5350; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; margin-top: 12px; transition: background-color 0.2s; }
 
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; background-color: var(--ios-card-bg); border-radius: 14px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
         .calendar-header-cell { font-size: 11px; font-weight: 600; color: var(--ios-text-sec); text-align: center; padding-bottom: 8px; }
@@ -69,7 +71,6 @@
         .dot-green { background-color: var(--ios-green); }
         .dot-orange { background-color: var(--ios-orange); }
         
-        /* Akordeon (İçindekiler) Stilleri */
         .category-row { background-color: var(--ios-card-bg); border-radius: 12px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
         .category-header { cursor: pointer; }
         .category-info { display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; margin-bottom: 6px; align-items: center; }
@@ -80,7 +81,6 @@
         .topic-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; font-size: 13px; color: var(--ios-text-main); border-bottom: 0.5px solid var(--ios-gray-bg); }
         .topic-item:last-child { border-bottom: none; }
         .topic-item.completed { color: var(--ios-green); font-weight: 500; }
-        .topic-icon { font-size: 14px; }
         .chevron { transition: transform 0.3s; color: var(--ios-text-sec); font-size: 10px; display: inline-block; }
         .chevron.open { transform: rotate(180deg); }
 
@@ -137,7 +137,7 @@
 
         <div id="view-stats" class="view">
             <div class="section-title">Müfredat İlerleme Durumu</div>
-            <p style="font-size: 12px; color: var(--ios-text-sec); margin-bottom: 12px;">Detayları görmek için derslerin üzerine tıklayın.</p>
+            <p style="font-size: 12px; color: var(--ios-text-sec); margin-bottom: 12px;">Dersleri açıp kapatmak için üzerlerine dokunun. Konuları buradan da direkt bitirebilirsiniz.</p>
             <div id="curriculum-progress-container"></div>
         </div>
 
@@ -156,14 +156,13 @@
             <div class="section-title">Uygulama Bilgileri</div>
             <div class="settings-group">
                 <div class="settings-row">
-                    <span class="settings-label">Günlük Çalışma Limiti</span>
-                    <span class="settings-label" style="color: var(--ios-text-sec);">Esnek</span>
-                </div>
-                <div class="settings-row">
                     <span class="settings-label">Hedef Sınav Tarihi</span>
                     <span class="settings-label" style="color: var(--ios-text-sec);">12 Temmuz 2026</span>
                 </div>
             </div>
+            
+            <button class="btn-reset" onclick="hardResetSchedule()">Takvimi Yeniden Oluştur (Sıfırla)</button>
+            <p style="font-size: 11px; color: var(--ios-text-sec); text-align: center; margin-top: 8px;">Takvim şaşarsa veya cihazlar arası farklı görünürse basın. Atılan tikler silinmez.</p>
         </div>
 
         <nav class="tab-bar">
@@ -175,7 +174,7 @@
                 <span class="tab-icon">📅</span>
                 <span>Takvim</span>
             </div>
-            <div class="tab-item" onclick="switchTab('stats', 'İlerleme')">
+            <div class="tab-item" onclick="switchTab('stats', 'İstatistik')">
                 <span class="tab-icon">📊</span>
                 <span>İlerleme</span>
             </div>
@@ -202,68 +201,82 @@
         const db = firebase.firestore();
         let unsubscribe = null; 
 
-        const APP_VERSION = "1.5";
+        // VERSİYON 1.8 - AKILLI SÜRE VE ÖNEM YAPILANDIRMASI
+        const APP_VERSION = "1.8";
 
         const ALL_TOPICS = [
-            { id: 1, category: "AGS Sözel Yetenek", title: "Sözcükte Anlam", duration: "30 dk", questions: "20 Soru" },
-            { id: 2, category: "AGS Sözel Yetenek", title: "Cümlede Anlam", duration: "30 dk", questions: "20 Soru" },
-            { id: 3, category: "AGS Sözel Yetenek", title: "Anlatımın Oluşması", duration: "35 dk", questions: "15 Soru" },
-            { id: 4, category: "AGS Sözel Yetenek", title: "Paragrafta Anlam", duration: "45 dk", questions: "25 Soru" },
-            { id: 5, category: "AGS Sözel Yetenek", title: "Sözel Mantık", duration: "40 dk", questions: "20 Soru" },
+            // AGS SÖZEL YETENEK (Önem Derecesine Göre Süre/Soru Ayarı)
+            { id: 1, category: "AGS Sözel Yetenek", title: "Sözcükte Anlam", duration: "30 dk", questions: "15 Soru" },
+            { id: 2, category: "AGS Sözel Yetenek", title: "Cümlede Anlam", duration: "35 dk", questions: "20 Soru" },
+            { id: 3, category: "AGS Sözel Yetenek", title: "Anlatımın Oluşması", duration: "30 dk", questions: "15 Soru" },
+            { id: 4, category: "AGS Sözel Yetenek", title: "Paragrafta Anlam [Kritik Önem]", duration: "55 dk", questions: "35 Soru" },
+            { id: 5, category: "AGS Sözel Yetenek", title: "Sözel Mantık [Kritik Önem]", duration: "50 dk", questions: "20 Soru" },
+            
+            // AGS SAYISAL YETENEK
             { id: 6, category: "AGS Sayısal Yetenek", title: "Temel Matematik Kuralları", duration: "45 dk", questions: "15 Soru" },
-            { id: 7, category: "AGS Sayısal Yetenek", title: "Grafik ve Tablo Yorumlama", duration: "40 dk", questions: "20 Soru" },
-            { id: 8, category: "AGS Sayısal Yetenek", title: "Mantıksal Muhakeme Problemleri", duration: "50 dk", questions: "15 Soru" },
-            { id: 9, category: "AGS Tarih", title: "İslamiyet Öncesi Türk Tarihi", duration: "30 dk", questions: "15 Soru" },
-            { id: 10, category: "AGS Tarih", title: "Türk İslam Devletleri", duration: "35 dk", questions: "15 Soru" },
-            { id: 11, category: "AGS Tarih", title: "Osmanlı Kuruluş Dönemi", duration: "30 dk", questions: "15 Soru" },
-            { id: 12, category: "AGS Tarih", title: "Osmanlı Yükselme Dönemi", duration: "35 dk", questions: "15 Soru" },
-            { id: 13, category: "AGS Tarih", title: "Osmanlı Duraklama Dönemi", duration: "30 dk", questions: "15 Soru" },
-            { id: 14, category: "AGS Tarih", title: "Osmanlı Gerileme Dönemi", duration: "35 dk", questions: "15 Soru" },
-            { id: 15, category: "AGS Tarih", title: "Osmanlı Kültür ve Medeniyet / Uygarlığı", duration: "45 dk", questions: "20 Soru" },
+            { id: 7, category: "AGS Sayısal Yetenek", title: "Grafik ve Tablo Yorumlama [Yüksek Önem]", duration: "50 dk", questions: "25 Soru" },
+            { id: 8, category: "AGS Sayısal Yetenek", title: "Mantıksal Muhakeme Problemleri", duration: "50 dk", questions: "20 Soru" },
+            
+            // AGS TARİH
+            { id: 9, category: "AGS Tarih", title: "İslamiyet Öncesi Türk Tarihi", duration: "25 dk", questions: "15 Soru" },
+            { id: 10, category: "AGS Tarih", title: "Türk İslam Devletleri", duration: "30 dk", questions: "15 Soru" },
+            { id: 11, category: "AGS Tarih", title: "Osmanlı Kuruluş Dönemi", duration: "25 dk", questions: "10 Soru" },
+            { id: 12, category: "AGS Tarih", title: "Osmanlı Yükselme Dönemi", duration: "30 dk", questions: "15 Soru" },
+            { id: 13, category: "AGS Tarih", title: "Osmanlı Duraklama Dönemi", duration: "25 dk", questions: "10 Soru" },
+            { id: 14, category: "AGS Tarih", title: "Osmanlı Gerileme Dönemi", duration: "25 dk", questions: "10 Soru" },
+            { id: 15, category: "AGS Tarih", title: "Osmanlı Kültür ve Medeniyeti [Çok Yüksek Önem]", duration: "65 dk", questions: "35 Soru" },
             { id: 16, category: "AGS Tarih", title: "XX. Yüzyılda Osmanlı Devleti", duration: "40 dk", questions: "20 Soru" },
-            { id: 17, category: "AGS Tarih", title: "Milli Mücadele Dönemi", duration: "50 dk", questions: "25 Soru" },
+            { id: 17, category: "AGS Tarih", title: "Milli Mücadele Dönemi [Çok Yüksek Önem]", duration: "70 dk", questions: "40 Soru" },
             { id: 18, category: "AGS Tarih", title: "Atatürk İlkeleri", duration: "25 dk", questions: "15 Soru" },
             { id: 19, category: "AGS Tarih", title: "Atatürk Dönemi Türkiye Dış Politikası", duration: "30 dk", questions: "15 Soru" },
-            { id: 20, category: "AGS Tarih", title: "Çağdaş Türk ve Dünya Tarihi", duration: "40 dk", questions: "20 Soru" },
+            { id: 20, category: "AGS Tarih", title: "Çağdaş Türk ve Dünya Tarihi", duration: "35 dk", questions: "15 Soru" },
+            
+            // AGS COĞRAFYA
             { id: 21, category: "AGS Coğrafya", title: "Türkiye'nin Coğrafi Konumu ve Jeopolitiği", duration: "30 dk", questions: "15 Soru" },
-            { id: 22, category: "AGS Coğrafya", title: "Türkiye'nin Jeolojik Geçmişi ve Yer Şekilleri", duration: "40 dk", questions: "15 Soru" },
+            { id: 22, category: "AGS Coğrafya", title: "Türkiye'nin Jeolojik Geçmişi ve Yer Şekilleri [Yüksek Önem]", duration: "50 dk", questions: "25 Soru" },
             { id: 23, category: "AGS Coğrafya", title: "Türkiye'de Dış Kuvvetler", duration: "35 dk", questions: "15 Soru" },
-            { id: 24, category: "AGS Coğrafya", title: "Türkiye'nin Su Kaynakları, Toprak ve Bitki Örtüsü", duration: "40 dk", questions: "15 Soru" },
+            { id: 24, category: "AGS Coğrafya", title: "Türkiye'nin Su Kaynakları, Toprak ve Bitki Örtüsü", duration: "35 dk", questions: "15 Soru" },
             { id: 25, category: "AGS Coğrafya", title: "Türkiye'nin İklim Özellikleri ve Doğal Afetler", duration: "35 dk", questions: "15 Soru" },
-            { id: 26, category: "AGS Coğrafya", title: "Türkiye'de Nüfus, Yerleşme ve Göç", duration: "35 dk", questions: "20 Soru" },
-            { id: 27, category: "AGS Coğrafya", title: "Türkiye'de Tarım ve Hayvancılık", duration: "35 dk", questions: "15 Soru" },
-            { id: 28, category: "AGS Coğrafya", title: "Türkiye'de Madenler ve Enerji Kaynakları", duration: "35 dk", questions: "15 Soru" },
-            { id: 29, category: "AGS Coğrafya", title: "Türkiye'de Sanayi, Ulaşım, Turizm ve Ticaret", duration: "45 dk", questions: "20 Soru" },
+            { id: 26, category: "AGS Coğrafya", title: "Türkiye'de Nüfus, Yerleşme ve Göç [Yüksek Önem]", duration: "45 dk", questions: "25 Soru" },
+            { id: 27, category: "AGS Coğrafya", title: "Türkiye'de Tarım ve Hayvancılık", duration: "35 dk", questions: "20 Soru" },
+            { id: 28, category: "AGS Coğrafya", title: "Türkiye'de Madenler ve Enerji Kaynakları", duration: "40 dk", questions: "20 Soru" },
+            { id: 29, category: "AGS Coğrafya", title: "Türkiye'de Sanayi, Ulaşım, Turizm ve Ticaret [Yüksek Önem]", duration: "55 dk", questions: "30 Soru" },
             { id: 30, category: "AGS Coğrafya", title: "Türkiye'de Bölge Sınıflandırması ve Kalkınma Projeleri", duration: "30 dk", questions: "15 Soru" },
-            { id: 31, category: "AGS Mevzuat", title: "T.C. Anayasası (2709 Sayılı Kanun)", duration: "45 dk", questions: "20 Soru" },
+            
+            // AGS MEVZUAT
+            { id: 31, category: "AGS Mevzuat", title: "T.C. Anayasası (2709 Sayılı Kanun) [Yüksek Önem]", duration: "55 dk", questions: "25 Soru" },
             { id: 32, category: "AGS Mevzuat", title: "1739 Sayılı Milli Eğitim Temel Kanunu", duration: "35 dk", questions: "15 Soru" },
-            { id: 33, category: "AGS Mevzuat", title: "222 Sayılı İlköğretim ve Eğitim Kanunu", duration: "35 dk", questions: "15 Soru" },
+            { id: 33, category: "AGS Mevzuat", title: "222 Sayılı İlköğretim ve Eğitim Kanunu", duration: "30 dk", questions: "15 Soru" },
             { id: 34, category: "AGS Mevzuat", title: "7528 Sayılı Öğretmenlik Mesleği Kanunu", duration: "30 dk", questions: "15 Soru" },
+            
+            // EĞİTİMİN TEMELLERİ
             { id: 35, category: "Eğitimin Temelleri", title: "Eğitim Biliminin Genel Kavramları ve Süreçleri", duration: "35 dk", questions: "15 Soru" },
             { id: 36, category: "Eğitimin Temelleri", title: "Eğitimin Tarihi, Felsefi ve Toplumsal Temelleri", duration: "40 dk", questions: "15 Soru" },
             { id: 37, category: "Eğitimin Temelleri", title: "Eğitimin Psikolojik, Ekonomik ve Politik Temelleri", duration: "40 dk", questions: "15 Soru" },
             { id: 38, category: "Eğitimin Temelleri", title: "Türk Milli Eğitim Sisteminin Genel Yapısı", duration: "35 dk", questions: "15 Soru" },
-            { id: 39, category: "Eğitimin Temelleri", title: "Türkiye Yüzyılı Maarif Modeli Yapısı", duration: "45 dk", questions: "20 Soru" },
-            { id: 40, category: "Eğitimin Temelleri", title: "Eğitim ve Öğretimde Etik İlkeler", duration: "25 dk", questions: "10 Soru" },
+            { id: 39, category: "Eğitimin Temelleri", title: "Türkiye Yüzyılı Maarif Modeli Yapısı [Yeni & Kritik]", duration: "55 dk", questions: "30 Soru" },
+            { id: 40, category: "Eğitimin Temelleri", title: "Eğitim ve Öğretimde Etik İlkeler", duration: "20 dk", questions: "10 Soru" },
             { id: 41, category: "Eğitimin Temelleri", title: "Eğitim ve Öğretim Teknolojileri", duration: "30 dk", questions: "15 Soru" },
-            { id: 42, category: "Eğitimin Temelleri", title: "Öğrenmeyi Etkileyen Faktörler", duration: "35 dk", questions: "15 Soru" },
-            { id: 43, category: "Eğitimin Temelleri", title: "Piaget'nin Bilişsel Gelişim Kuramı", duration: "40 dk", questions: "20 Soru" },
-            { id: 44, category: "Eğitimin Temelleri", title: "Öğrenme Kuramları ve Değerlendirme", duration: "45 dk", questions: "20 Soru" },
+            { id: 42, category: "Eğitimin Temelleri", title: "Öğrenmeyi Etkileyen Faktörler & Klasik Koşullanma", duration: "40 dk", questions: "20 Soru" },
+            { id: 43, category: "Eğitimin Temelleri", title: "Piaget'nin Bilişsel Gelişim Kuramı [Kritik Önem]", duration: "55 dk", questions: "25 Soru" },
+            { id: 44, category: "Eğitimin Temelleri", title: "Öğrenme Kuramları ve Değerlendirme [Yüksek Önem]", duration: "50 dk", questions: "25 Soru" },
             { id: 45, category: "Eğitimin Temelleri", title: "Rehberlik & Gelişim Psikolojisi Giriş", duration: "40 dk", questions: "15 Soru" },
             { id: 46, category: "Eğitimin Temelleri", title: "Sınıf Yönetimi & Program Okuryazarlığı", duration: "35 dk", questions: "15 Soru" },
-            { id: 47, category: "Okul Öncesi ÖABT", title: "Erken Çocukluk Eğitimine Giriş", duration: "40 dk", questions: "20 Soru" },
-            { id: 48, category: "Okul Öncesi ÖABT", title: "Çocuk Sağlığı ve İlk Yardım", duration: "35 dk", questions: "15 Soru" },
-            { id: 49, category: "Okul Öncesi ÖABT", title: "Erken Çocukluk Döneminde Gelişim", duration: "50 dk", questions: "25 Soru" },
-            { id: 50, category: "Okul Öncesi ÖABT", title: "Çocuk Ruh Sağlığı Yapısı", duration: "45 dk", questions: "20 Soru" },
-            { id: 51, category: "Okul Öncesi ÖABT", title: "Erken Çocukluk Dönemi Edebiyatı", duration: "35 dk", questions: "15 Soru" },
-            { id: 52, category: "Okul Öncesi ÖABT", title: "Erken Çocuklukta Program, Yöntem ve Yaklaşımlar", duration: "50 dk", questions: "25 Soru" },
-            { id: 53, category: "Okul Öncesi ÖABT", title: "Anne-Baba Eğitimi Yaklaşımları", duration: "35 dk", questions: "15 Soru" },
+            
+            // OKUL ÖNCESİ ÖABT (Katsayısı En Yüksek Havuz)
+            { id: 47, category: "Okul Öncesi ÖABT", title: "Erken Çocukluk Eğitimine Giriş", duration: "45 dk", questions: "20 Soru" },
+            { id: 48, category: "Okul Öncesi ÖABT", title: "Çocuk Sağlığı ve İlk Yardım", duration: "40 dk", questions: "20 Soru" },
+            { id: 49, category: "Okul Öncesi ÖABT", title: "Erken Çocukluk Döneminde Gelişim [Hayati Önem]", duration: "75 dk", questions: "40 Soru" },
+            { id: 50, category: "Okul Öncesi ÖABT", title: "Çocuk Ruh Sağlığı Yapısı", duration: "45 dk", questions: "25 Soru" },
+            { id: 51, category: "Okul Öncesi ÖABT", title: "Erken Çocukluk Dönemi Edebiyatı", duration: "40 dk", questions: "20 Soru" },
+            { id: 52, category: "Okul Öncesi ÖABT", title: "Erken Çocuklukta Program, Yöntem ve Yaklaşımlar [Hayati Önem]", duration: "75 dk", questions: "40 Soru" },
+            { id: 53, category: "Okul Öncesi ÖABT", title: "Anne-Baba Eğitimi Yaklaşımları", duration: "40 dk", questions: "20 Soru" },
             { id: 54, category: "Okul Öncesi ÖABT", title: "Çocuk Hakları ve Mevzuatı", duration: "30 dk", questions: "15 Soru" },
-            { id: 55, category: "Okul Öncesi ÖABT", title: "Alan Eğitimi: Fen ve Matematik Eğitimi", duration: "45 dk", questions: "20 Soru" },
-            { id: 56, category: "Okul Öncesi ÖABT", title: "Alan Eğitimi: Görsel Sanatlar ve Müzik Eğitimi", duration: "40 dk", questions: "20 Soru" },
-            { id: 57, category: "Okul Öncesi ÖABT", title: "Alan Eğitimi: Oyun ve Drama Eğitimi", duration: "45 dk", questions: "20 Soru" },
-            { id: 58, category: "Okul Öncesi ÖABT", title: "Alan Eğitimi: Öğrenme Yaklaşımları ve Okula Uyum", duration: "40 dk", questions: "25 Soru" },
-            { id: 59, category: "Okul Öncesi ÖABT", title: "Alan Eğitimi: Erken Okuryazarlık Eğitimi", duration: "40 dk", questions: "20 Soru" }
+            { id: 55, category: "Okul Öncesi ÖABT", title: "Alan Eğitimi: Fen ve Matematik Eğitimi [Yüksek Önem]", duration: "65 dk", questions: "30 Soru" },
+            { id: 56, category: "Okul Öncesi ÖABT", title: "Alan Eğitimi: Görsel Sanatlar ve Müzik Eğitimi", duration: "45 dk", questions: "25 Soru" },
+            { id: 57, category: "Okul Öncesi ÖABT", title: "Alan Eğitimi: Oyun ve Drama Eğitimi [Yüksek Önem]", duration: "65 dk", questions: "35 Soru" },
+            { id: 58, category: "Okul Öncesi ÖABT", title: "Alan Eğitimi: Öğrenme Yaklaşımları ve Okula Uyum", duration: "45 dk", questions: "25 Soru" },
+            { id: 59, category: "Okul Öncesi ÖABT", title: "Alan Eğitimi: Erken Okuryazarlık Eğitimi", duration: "50 dk", questions: "25 Soru" }
         ];
 
         const TARGET_DATE = new Date(2026, 6, 12); 
@@ -340,11 +353,23 @@
             }
         }
 
+        function hardResetSchedule() {
+            localStorage.removeItem("ags_schedule");
+            generateInitialSchedule();
+            refreshUI();
+            alert("Takvim akıllı süre yapılandırmasıyla başarıyla sıfırlandı!");
+        }
+
         function refreshUI() {
             renderTodayTasks();
-            renderCurriculumProgress(); // İÇİNDEKİLER BURADA GÜNCELLENİYOR
+            renderCurriculumProgress();
             buildCalendar();
             updateAIMotivation();
+            
+            const selectedCell = document.querySelector('.calendar-day-cell.selected');
+            if(selectedCell && selectedCell.dataset.date) {
+                renderSelectedDayTasks(selectedCell.dataset.date);
+            }
         }
 
         function initCountdown() {
@@ -355,7 +380,8 @@
         }
 
         function generateInitialSchedule() {
-            let startDate = new Date(); 
+            let startDate = new Date(2026, 4, 17); 
+            
             let agirKonular = ALL_TOPICS.filter(t => t.category.includes("ÖABT") || t.category.includes("Eğitimin"));
             let hafifKonular = ALL_TOPICS.filter(t => !t.category.includes("ÖABT") && !t.category.includes("Eğitimin"));
             let harmanlanmisListe = [];
@@ -436,7 +462,6 @@
         function pullFutureTaskToToday() {
             const todayStr = toLocalDateString(new Date());
             let foundTask = null;
-            let sourceDate = null;
 
             const sortedDates = Object.keys(appSchedule).sort();
             for (let date of sortedDates) {
@@ -446,7 +471,6 @@
                         const t = tasksOnDate[i];
                         if (!completedTaskIds.includes(t.id)) {
                             foundTask = t;
-                            sourceDate = date;
                             tasksOnDate.splice(i, 1); 
                             break;
                         }
@@ -459,9 +483,6 @@
                 if (!appSchedule[todayStr]) appSchedule[todayStr] = [];
                 appSchedule[todayStr].push(foundTask); 
                 localStorage.setItem("ags_schedule", JSON.stringify(appSchedule));
-                
-                const topicDetails = ALL_TOPICS.find(t => t.id === foundTask.id);
-                alert(`Harika! İleriki günlerden "${topicDetails.title}" konusu bugüne çekildi. İlerideki programın hafifledi!`);
                 refreshUI();
             }
         }
@@ -487,8 +508,9 @@
         function triggerReschedule() {
             const todayStr = toLocalDateString(new Date());
             let uncompletedRefs = [];
+            
             Object.keys(appSchedule).forEach(dateStr => {
-                if(dateStr <= todayStr) {
+                if(dateStr < todayStr) {
                     appSchedule[dateStr] = appSchedule[dateStr].filter(ref => {
                         if(!completedTaskIds.includes(ref.id)) { uncompletedRefs.push(ref); return false; }
                         return true;
@@ -506,10 +528,9 @@
             }
             localStorage.setItem("ags_schedule", JSON.stringify(appSchedule));
             refreshUI();
-            alert("Eksik konular kalan günlere dengeli şekilde dağıtıldı!");
+            alert("Geçmiş eksikler kalan günlere harmanlandı. Bugünün planı korundu!");
         }
 
-        // İÇİNDEKİLER BÖLÜMÜNÜ OLUŞTURAN FONKSİYON
         function renderCurriculumProgress() {
             const container = document.getElementById("curriculum-progress-container");
             container.innerHTML = "";
@@ -521,20 +542,26 @@
                 const completed = catTopics.filter(t => completedTaskIds.includes(t.id)).length;
                 const pct = Math.round((completed / total) * 100) || 0;
 
-                // Akordeon içeriği (Alt konular)
                 let topicListHTML = `<div class="topic-list" id="topic-list-${index}">`;
                 catTopics.forEach(t => {
                     const isDone = completedTaskIds.includes(t.id);
                     topicListHTML += `
-                        <div class="topic-item ${isDone ? 'completed' : ''}">
-                            <span>${t.title}</span>
-                            <span class="topic-icon">${isDone ? '✅' : '⏳'}</span>
+                        <div class="topic-item ${isDone ? 'completed' : ''}" style="padding: 12px 0;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <label class="checkbox-container" style="margin-top:0;">
+                                        <input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleTask(${t.id})">
+                                        <span class="checkmark" style="width:18px; height:18px;"></span>
+                                    </label>
+                                    <span style="font-size:13px; margin-left:6px;">${t.title}</span>
+                                </div>
+                                <span style="font-size:11px; color:var(--ios-text-sec); margin-right:10px;">⏱️ ${t.duration}</span>
+                            </div>
                         </div>
                     `;
                 });
                 topicListHTML += `</div>`;
 
-                // Ana başlık ve çubuk
                 container.insertAdjacentHTML('beforeend', `
                     <div class="category-row">
                         <div class="category-header" onclick="toggleCategory(${index})">
@@ -552,7 +579,7 @@
             });
         }
 
-        // İçindekiler menüsünü açıp kapatma fonksiyonu
+        // Akordeon açıp kapatma fonksiyonu
         function toggleCategory(index) {
             const list = document.getElementById(`topic-list-${index}`);
             const chevron = document.getElementById(`chevron-${index}`);
@@ -582,17 +609,24 @@
                     let allDone = tasks.every(ref => completedTaskIds.includes(ref.id));
                     dotClass = allDone ? "dot-green" : "dot-orange";
                 }
-                let isToday = (currentStr === todayStr);
+                
+                const isSelected = (currentStr === todayStr);
                 grid.insertAdjacentHTML('beforeend', `
-                    <div class="calendar-day-cell ${isToday ? 'selected' : ''}" onclick="showDayDetails('${currentStr}', this)">
+                    <div class="calendar-day-cell ${isSelected ? 'selected' : ''}" data-date="${currentStr}" onclick="showDayDetails('${currentStr}', this)">
                         ${day} ${dotClass ? `<div class="calendar-dot ${dotClass}"></div>` : ''}
                     </div>`);
             }
+            
+            renderSelectedDayTasks(todayStr);
         }
 
         function showDayDetails(dateStr, element) {
             document.querySelectorAll('.calendar-day-cell').forEach(el => el.classList.remove('selected'));
             element.classList.add('selected');
+            renderSelectedDayTasks(dateStr);
+        }
+
+        function renderSelectedDayTasks(dateStr) {
             const container = document.getElementById("selected-day-tasks");
             const dayTasks = appSchedule[dateStr] || [];
             if(dayTasks.length === 0) {
@@ -603,10 +637,13 @@
                 const topicDetails = ALL_TOPICS.find(t => t.id === ref.id);
                 const isCompleted = completedTaskIds.includes(ref.id);
                 container.insertAdjacentHTML('beforeend', `
-                    <div class="task-card" style="box-shadow: none; border: 1px solid var(--ios-border);">
+                    <div class="task-card ${isCompleted ? 'completed' : ''}" style="box-shadow: none; border: 1px solid var(--ios-border);">
+                        <label class="checkbox-container">
+                            <input type="checkbox" ${isCompleted ? 'checked' : ''} onchange="toggleTask(${ref.id})">
+                            <span class="checkmark"></span>
+                        </label>
                         <div class="task-details">
-                            <div class="task-category" style="color: ${isCompleted ? 'var(--ios-green)' : 'var(--ios-blue)'}">
-                                ${topicDetails.category} ${isCompleted ? '✓' : ''}</div>
+                            <div class="task-category">${topicDetails.category}</div>
                             <div class="task-title">${topicDetails.title}</div>
                             <div class="task-meta">⏱️ ${topicDetails.duration} | 🎯 ${topicDetails.questions}</div>
                         </div>
