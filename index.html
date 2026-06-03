@@ -11,6 +11,7 @@
     <meta name="apple-mobile-web-app-title" content="AGS Plan">
     <link rel="apple-touch-icon" href="https://dummyimage.com/192x192/007AFF/ffffff.png&text=AGS">
     
+    <!-- Firebase Compat SDK'ları -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
@@ -196,7 +197,8 @@
             <div class="settings-group">
                 <div class="settings-row">
                     <span class="settings-label">Hedef Sınav Tarihi</span>
-                    <span class="settings-label" style="color: var(--ios-text-sec);">12 Temmuz 2026</span>
+                    <!-- HEDEF TARİH GÜNCELLENDİ -->
+                    <span class="settings-label" style="color: var(--ios-text-sec);">26 Temmuz 2026</span>
                 </div>
             </div>
             
@@ -244,7 +246,8 @@
         let unsubscribeTasks = null; 
         let unsubscribeHata = null;
 
-        const APP_VERSION = "1.9";
+        // VERSİYON GÜNCELLENDİ: Tarih ve plan uyumu için 2.0
+        const APP_VERSION = "2.0";
 
         const ALL_TOPICS = [
             { id: 1, category: "AGS Sözel Yetenek", title: "Sözcükte Anlam", duration: "30 dk", questions: "15 Soru" },
@@ -308,7 +311,8 @@
             { id: 59, category: "Okul Öncesi ÖABT", title: "Alan Eğitimi: Erken Okuryazarlık Eğitimi", duration: "50 dk", questions: "25 Soru" }
         ];
 
-        const TARGET_DATE = new Date(2026, 6, 12); 
+        // HEDEF TARİH GÜNCELLENDİ (26 Temmuz 2026)
+        const TARGET_DATE = new Date(2026, 6, 26); 
         let appSchedule = {};
         let completedTaskIds = [];
         let jointCode = localStorage.getItem("ags_joint_code") || "EV-CZD26";
@@ -660,7 +664,6 @@
             container.innerHTML = "";
             snapshot.forEach(doc => {
                 const data = doc.data();
-                // FOTOĞRAFA TIKLAYINCA ARTIK LİGHTBOX AÇILACAK
                 container.insertAdjacentHTML('beforeend', `
                     <div class="hata-card">
                         <div class="hata-img-wrapper">
@@ -676,7 +679,6 @@
             });
         }
 
-        // --- LİGHTBOX FONKSİYONLARI ---
         function openLightbox(src) {
             document.getElementById('lightbox-full-img').src = src;
             document.getElementById('image-lightbox').style.display = 'flex';
