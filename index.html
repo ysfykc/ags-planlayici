@@ -1,781 +1,1149 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>AGS & ÖABT Akıllı Planlayıcı</title>
-    
     <link rel="manifest" href="manifest.json">
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="AGS Plan">
-    <link rel="apple-touch-icon" href="https://dummyimage.com/192x192/007AFF/ffffff.png&text=AGS">
-    
-    <!-- Firebase Compat SDK'ları -->
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
     <style>
         :root {
-            --ios-blue: #007AFF;
-            --ios-green: #34C759;
-            --ios-orange: #FF9500;
-            --ios-red: #FF3B30;
-            --ios-gray-bg: #F2F2F7;
-            --ios-card-bg: #FFFFFF;
-            --ios-text-main: #000000;
-            --ios-text-sec: #8E8E93;
-            --ios-border: #E5E5EA;
+            --blue: #007AFF;
+            --green: #34C759;
+            --orange: #FF9500;
+            --red: #FF3B30;
+            --purple: #AF52DE;
+            --bg: #F2F2F7;
+            --card: #FFFFFF;
+            --text: #000000;
+            --text-sec: #8E8E93;
+            --border: #E5E5EA;
+            --header-bg: rgba(255,255,255,0.85);
+            --tab-bg: rgba(255,255,255,0.92);
+            --input-bg: #F2F2F7;
+            --shadow: rgba(0,0,0,0.06);
         }
+        [data-theme="dark"] {
+            --bg: #1C1C1E;
+            --card: #2C2C2E;
+            --text: #FFFFFF;
+            --text-sec: #8E8E93;
+            --border: #3A3A3C;
+            --header-bg: rgba(28,28,30,0.88);
+            --tab-bg: rgba(28,28,30,0.92);
+            --input-bg: #3A3A3C;
+            --shadow: rgba(0,0,0,0.3);
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
-        body { background-color: var(--ios-gray-bg); color: var(--ios-text-main); display: flex; justify-content: center; min-height: 100vh; }
-        .app-container { width: 100%; max-width: 430px; background-color: var(--ios-gray-bg); display: flex; flex-direction: column; position: relative; min-height: 100vh; padding-bottom: 85px; box-shadow: 0 0 20px rgba(0,0,0,0.05); }
-        header { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); position: sticky; top: 0; z-index: 100; padding: 20px 16px 12px 16px; border-bottom: 0.5px solid var(--ios-border); display: flex; justify-content: space-between; align-items: center;}
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .app { width: 100%; max-width: 430px; display: flex; flex-direction: column; position: relative; min-height: 100vh; padding-bottom: 90px; }
+
+        /* ── HEADER ── */
+        header {
+            background: var(--header-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            position: sticky; top: 0; z-index: 100;
+            padding: 20px 16px 12px;
+            border-bottom: 0.5px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .header-left { display: flex; flex-direction: column; gap: 2px; }
         header h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; }
-        .sync-status { font-size: 10px; font-weight: 600; padding: 4px 8px; border-radius: 12px; background: #E5E5EA; color: #8E8E93; }
-        .sync-status.online { background: #E8F5E9; color: #2E7D32; }
-        .countdown-widget { background: linear-gradient(135deg, #1D2A44, #0F172A); color: white; border-radius: 16px; padding: 16px; margin: 12px 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .countdown-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #94A3B8; margin-bottom: 4px; }
-        .countdown-days { font-size: 32px; font-weight: 800; }
-        .ai-box { background-color: #E3F2FD; border-left: 4px solid var(--ios-blue); border-radius: 12px; padding: 14px; margin: 0 16px 16px 16px; }
-        .ai-title { font-size: 13px; font-weight: 600; color: #0D47A1; margin-bottom: 4px; }
-        .ai-text { font-size: 13px; color: #1565C0; line-height: 1.4; }
-        .view { display: none; padding: 0 16px; }
+        .header-progress { font-size: 12px; color: var(--text-sec); font-weight: 500; }
+        .header-right { display: flex; align-items: center; gap: 8px; }
+        .sync-pill { font-size: 10px; font-weight: 600; padding: 4px 9px; border-radius: 12px; background: var(--border); color: var(--text-sec); transition: all 0.3s; }
+        .sync-pill.online { background: #E8F5E9; color: #2E7D32; }
+        [data-theme="dark"] .sync-pill.online { background: #1B3B1F; color: #4CAF50; }
+        .dark-toggle { background: none; border: none; font-size: 20px; cursor: pointer; padding: 2px; line-height: 1; }
+
+        /* ── COUNTDOWN ── */
+        .countdown { background: linear-gradient(135deg, #1D2A44, #0F172A); color: white; border-radius: 20px; padding: 18px 20px; margin: 12px 16px 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); display: flex; justify-content: space-between; align-items: center; }
+        .countdown-left { display: flex; flex-direction: column; }
+        .countdown-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: #94A3B8; margin-bottom: 4px; }
+        .countdown-days { font-size: 36px; font-weight: 800; letter-spacing: -1px; }
+        .countdown-right { display: flex; gap: 12px; }
+        .countdown-unit { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        .countdown-num { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .countdown-unit-label { font-size: 9px; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* ── MOTIVATION ── */
+        .motivation-card { background: var(--card); border-radius: 14px; padding: 14px 16px; margin: 10px 16px 0; display: flex; align-items: flex-start; gap: 12px; box-shadow: 0 1px 4px var(--shadow); border-left: 4px solid var(--blue); }
+        .motivation-icon { font-size: 22px; flex-shrink: 0; margin-top: 1px; }
+        .motivation-text { font-size: 13px; color: var(--text-sec); line-height: 1.5; }
+        .motivation-text strong { color: var(--text); }
+
+        /* ── VIEWS ── */
+        .view { display: none; padding: 0 16px 8px; }
         .view.active { display: block; }
-        .section-title { font-size: 18px; font-weight: 700; margin: 16px 0 8px 0; color: #1C1C1E; }
-        .task-card { background-color: var(--ios-card-bg); border-radius: 14px; padding: 16px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: transform 0.2s, opacity 0.2s; }
-        .task-card.completed { opacity: 0.6; }
-        .checkbox-container { position: relative; cursor: pointer; display: block; margin-top: 2px; }
-        .checkbox-container input { position: absolute; opacity: 0; cursor: pointer; height: 0; width: 0; }
-        .checkmark { height: 22px; width: 22px; background-color: #FFF; border: 2px solid var(--ios-border); border-radius: 50%; display: inline-block; position: relative; transition: all 0.2s; }
-        .checkbox-container input:checked ~ .checkmark { background-color: var(--ios-blue); border-color: var(--ios-blue); }
-        .checkmark:after { content: ""; position: absolute; display: none; left: 7px; top: 3px; width: 5px; height: 10px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); }
-        .checkbox-container input:checked ~ .checkmark:after { display: block; }
-        .task-details { flex-grow: 1; }
-        .task-category { font-size: 11px; font-weight: 600; color: var(--ios-blue); text-transform: uppercase; margin-bottom: 2px; }
-        .task-title { font-size: 15px; font-weight: 600; color: var(--ios-text-main); line-height: 1.3; }
-        .task-meta { font-size: 12px; color: var(--ios-text-sec); margin-top: 4px; display: flex; gap: 12px; }
-        .telafi-banner { background-color: #FFF3E0; border-radius: 14px; padding: 14px; margin-bottom: 16px; border: 1px solid #FFE0B2; display: flex; flex-direction: column; gap: 8px; }
-        .telafi-text { font-size: 13px; color: #E65100; font-weight: 500; }
-        .btn-telafi { background-color: var(--ios-orange); color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; align-self: flex-start; }
-        
-        .btn-extra { width: 100%; padding: 14px; background-color: #E8F5E9; color: #2E7D32; border: 1px dashed #4CAF50; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; margin-top: 4px; margin-bottom: 12px; transition: background-color 0.2s; }
-        .btn-extra:active { background-color: #C8E6C9; }
-        
-        .btn-reset { width: 100%; padding: 14px; background-color: #FFEBEE; color: #C62828; border: 1px dashed #EF5350; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; margin-top: 12px; transition: background-color 0.2s; }
+        .section-title { font-size: 18px; font-weight: 700; margin: 16px 0 8px; }
 
-        /* Hata Kutusu Özel Stilleri */
-        .btn-hata-ekle { width: 100%; padding: 16px; background-color: var(--ios-blue); color: white; border: none; border-radius: 14px; font-weight: 600; font-size: 15px; cursor: pointer; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,122,255,0.15); }
-        .hata-card { background: var(--ios-card-bg); border-radius: 16px; overflow: hidden; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); border: 0.5px solid var(--ios-border); }
-        .hata-img-wrapper { width: 100%; max-height: 250px; overflow: hidden; background: #E5E5EA; display: flex; align-items: center; justify-content: center; cursor: zoom-in; }
-        .hata-img { width: 100%; height: auto; object-fit: cover; }
-        .hata-content { padding: 14px; }
-        .hata-date { font-size: 11px; color: var(--ios-text-sec); margin-bottom: 6px; }
-        .hata-status-badge { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; background: #FFF3E0; color: #E65100; margin-bottom: 8px; }
-        .btn-hata-sil { background: #FFEBEE; color: var(--ios-red); border: none; padding: 8px 12px; border-radius: 8px; font-weight: 600; font-size: 12px; cursor: pointer; width: 100%; margin-top: 10px; }
-        .ai-loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 1000; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
-        .spinner { width: 40px; height: 40px; border: 4px solid var(--ios-border); border-top-color: var(--ios-blue); border-radius: 50%; animation: spin 1s linear infinite; }
+        /* ── TASK CARDS ── */
+        .task-card {
+            background: var(--card);
+            border-radius: 14px;
+            padding: 14px 14px 14px 16px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            box-shadow: 0 1px 4px var(--shadow);
+            transition: opacity 0.25s, transform 0.2s;
+        }
+        .task-card.completed { opacity: 0.55; }
+        .task-card:active { transform: scale(0.98); }
+
+        .cb { position: relative; cursor: pointer; display: block; margin-top: 2px; flex-shrink: 0; }
+        .cb input { position: absolute; opacity: 0; width: 0; height: 0; }
+        .cb-ring { width: 22px; height: 22px; border: 2px solid var(--border); border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .cb input:checked ~ .cb-ring { background: var(--blue); border-color: var(--blue); }
+        .cb-ring::after { content: ""; width: 5px; height: 9px; border: 2px solid white; border-top: none; border-left: none; transform: rotate(45deg) translateY(-1px); display: none; }
+        .cb input:checked ~ .cb-ring::after { display: block; }
+
+        .task-info { flex: 1; min-width: 0; }
+        .task-cat { font-size: 11px; font-weight: 600; color: var(--blue); text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px; }
+        .task-title { font-size: 15px; font-weight: 600; line-height: 1.35; }
+        .task-meta { font-size: 12px; color: var(--text-sec); margin-top: 5px; display: flex; gap: 12px; flex-wrap: wrap; }
+
+        /* Priority badges */
+        .badge { display: inline-block; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.3px; margin-left: 6px; vertical-align: middle; }
+        .badge-red { background: #FFEBEE; color: var(--red); }
+        .badge-orange { background: #FFF3E0; color: var(--orange); }
+        [data-theme="dark"] .badge-red { background: #3B1C1C; }
+        [data-theme="dark"] .badge-orange { background: #3B2A1C; }
+
+        /* ── TELAFI ── */
+        .telafi-banner { background: #FFF3E0; border-radius: 14px; padding: 14px; margin-bottom: 14px; border: 1px solid #FFE0B2; }
+        [data-theme="dark"] .telafi-banner { background: #2D1F0A; border-color: #5C3D0A; }
+        .telafi-text { font-size: 13px; color: #E65100; font-weight: 500; margin-bottom: 10px; }
+        [data-theme="dark"] .telafi-text { color: #FFA040; }
+        .btn-telafi { background: var(--orange); color: white; border: none; padding: 9px 14px; border-radius: 9px; font-weight: 600; font-size: 13px; cursor: pointer; }
+
+        /* ── BUTTONS ── */
+        .btn-outline { width: 100%; padding: 14px; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; margin-bottom: 10px; }
+        .btn-outline:active { transform: scale(0.97); }
+        .btn-green { background: #E8F5E9; color: #2E7D32; border: 1.5px dashed #4CAF50; }
+        .btn-red { background: #FFEBEE; color: #C62828; border: 1.5px dashed #EF5350; }
+        [data-theme="dark"] .btn-green { background: #1B3B1F; color: #66BB6A; }
+        [data-theme="dark"] .btn-red { background: #3B1C1C; color: #EF9A9A; }
+
+        /* ── HATA KUTUSU ── */
+        .btn-add-hata { width: 100%; padding: 16px; background: var(--blue); color: white; border: none; border-radius: 14px; font-weight: 600; font-size: 15px; cursor: pointer; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(0,122,255,0.25); transition: opacity 0.2s; }
+        .btn-add-hata:active { opacity: 0.8; }
+
+        .hata-card { background: var(--card); border-radius: 16px; overflow: hidden; margin-bottom: 14px; box-shadow: 0 2px 8px var(--shadow); border: 0.5px solid var(--border); }
+        .hata-img-wrap { width: 100%; max-height: 220px; overflow: hidden; background: var(--bg); display: flex; align-items: center; justify-content: center; cursor: zoom-in; }
+        .hata-img { width: 100%; height: auto; object-fit: cover; transition: transform 0.2s; }
+        .hata-img:active { transform: scale(0.98); }
+        .hata-body { padding: 14px; }
+        .hata-date { font-size: 11px; color: var(--text-sec); margin-bottom: 8px; }
+        .hata-ai-result { background: var(--bg); border-radius: 10px; padding: 10px 12px; font-size: 13px; color: var(--text); line-height: 1.5; margin-bottom: 10px; }
+        .hata-ai-result .ai-label { font-size: 11px; font-weight: 700; color: var(--blue); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .btn-hata-sil { background: #FFEBEE; color: var(--red); border: none; padding: 9px 12px; border-radius: 9px; font-weight: 600; font-size: 12px; cursor: pointer; width: 100%; }
+        [data-theme="dark"] .btn-hata-sil { background: #3B1C1C; color: #FF6B6B; }
+
+        /* ── AI OVERLAY ── */
+        .ai-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center; flex-direction: column; gap: 16px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+        .ai-overlay.active { display: flex; }
+        .ai-spinner { width: 44px; height: 44px; border: 4px solid rgba(255,255,255,0.2); border-top-color: white; border-radius: 50%; animation: spin 0.9s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        .ai-overlay-text { color: white; font-weight: 600; font-size: 15px; }
+        .ai-overlay-sub { color: rgba(255,255,255,0.7); font-size: 12px; text-align: center; padding: 0 40px; }
 
-        /* Lightbox (Tam Ekran Fotoğraf) Stilleri */
-        .lightbox-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 3000; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); cursor: zoom-out; }
-        .lightbox-img { max-width: 100%; max-height: 90vh; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); object-fit: contain; }
-        .lightbox-close-btn { position: absolute; top: 24px; right: 24px; background: rgba(255,255,255,0.2); border: none; color: white; width: 40px; height: 40px; border-radius: 20px; font-size: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(10px); }
+        /* ── LIGHTBOX ── */
+        .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 3000; align-items: center; justify-content: center; padding: 20px; cursor: zoom-out; }
+        .lightbox.active { display: flex; }
+        .lightbox-img { max-width: 100%; max-height: 88vh; border-radius: 12px; object-fit: contain; }
+        .lightbox-close { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.18); border: none; color: white; width: 38px; height: 38px; border-radius: 50%; font-size: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; background-color: var(--ios-card-bg); border-radius: 14px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
-        .calendar-header-cell { font-size: 11px; font-weight: 600; color: var(--ios-text-sec); text-align: center; padding-bottom: 8px; }
-        .calendar-day-cell { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 14px; font-weight: 500; border-radius: 50%; position: relative; cursor: pointer; }
-        .calendar-day-cell.selected { background-color: var(--ios-blue); color: white !important; }
-        .calendar-dot { height: 4px; width: 4px; border-radius: 50%; position: absolute; bottom: 4px; }
-        .dot-green { background-color: var(--ios-green); }
-        .dot-orange { background-color: var(--ios-orange); }
-        
-        .category-row { background-color: var(--ios-card-bg); border-radius: 12px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
-        .category-header { cursor: pointer; }
-        .category-info { display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; margin-bottom: 6px; align-items: center; }
-        .progress-bar-bg { background-color: var(--ios-gray-bg); height: 8px; border-radius: 4px; overflow: hidden; }
-        .progress-bar-fill { background-color: var(--ios-green); height: 100%; width: 0%; transition: width 0.3s ease; }
-        .topic-list { display: none; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--ios-border); }
-        .topic-list.expanded { display: block; }
-        .topic-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; font-size: 13px; color: var(--ios-text-main); border-bottom: 0.5px solid var(--ios-gray-bg); }
+        /* ── CUSTOM MODAL ── */
+        .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 4000; align-items: flex-end; justify-content: center; backdrop-filter: blur(4px); }
+        .modal-backdrop.active { display: flex; }
+        .modal-box { background: var(--card); border-radius: 20px 20px 0 0; width: 100%; max-width: 430px; padding: 24px 20px 32px; animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
+        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } }
+        .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+        .modal-msg { font-size: 14px; color: var(--text-sec); line-height: 1.5; margin-bottom: 20px; }
+        .modal-actions { display: flex; flex-direction: column; gap: 10px; }
+        .modal-btn { width: 100%; padding: 14px; border-radius: 12px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+        .modal-btn:active { opacity: 0.7; }
+        .modal-confirm { background: var(--blue); color: white; }
+        .modal-confirm.danger { background: var(--red); }
+        .modal-cancel { background: var(--bg); color: var(--text-sec); }
+
+        /* ── CALENDAR ── */
+        .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+        .cal-nav-btn { background: var(--card); border: none; color: var(--blue); font-size: 20px; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px var(--shadow); }
+        .cal-title { font-size: 17px; font-weight: 700; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; background: var(--card); border-radius: 16px; padding: 14px; box-shadow: 0 1px 4px var(--shadow); }
+        .cal-head { font-size: 11px; font-weight: 600; color: var(--text-sec); text-align: center; padding-bottom: 6px; }
+        .cal-day { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 14px; font-weight: 500; border-radius: 50%; position: relative; cursor: pointer; transition: background 0.15s; }
+        .cal-day:active { background: var(--border); }
+        .cal-day.today { font-weight: 700; }
+        .cal-day.selected { background: var(--blue); color: white !important; }
+        .cal-day.past { color: var(--text-sec); }
+        .cal-dot { width: 5px; height: 5px; border-radius: 50%; position: absolute; bottom: 3px; }
+        .cal-dot.green { background: var(--green); }
+        .cal-dot.orange { background: var(--orange); }
+        .cal-dot.selected { background: white; }
+
+        /* ── PROGRESS ── */
+        .cat-row { background: var(--card); border-radius: 14px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 3px var(--shadow); }
+        .cat-header { cursor: pointer; }
+        .cat-info { display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+        .cat-pct { color: var(--text-sec); font-size: 13px; font-weight: 500; }
+        .progress-bg { background: var(--bg); height: 7px; border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; border-radius: 4px; transition: width 0.35s ease; background: var(--green); }
+        .topic-list { display: none; padding-top: 10px; margin-top: 10px; border-top: 1px solid var(--border); }
+        .topic-list.open { display: block; }
+        .topic-item { display: flex; align-items: center; gap: 10px; padding: 9px 0; font-size: 13px; border-bottom: 0.5px solid var(--bg); }
         .topic-item:last-child { border-bottom: none; }
-        .topic-item.completed { color: var(--ios-green); font-weight: 500; }
-        .chevron { transition: transform 0.3s; color: var(--ios-text-sec); font-size: 10px; display: inline-block; }
+        .topic-item.done { color: var(--green); }
+        .topic-title { flex: 1; }
+        .topic-dur { font-size: 11px; color: var(--text-sec); flex-shrink: 0; }
+        .chevron { color: var(--text-sec); font-size: 12px; transition: transform 0.25s; }
         .chevron.open { transform: rotate(180deg); }
 
-        .settings-group { background-color: var(--ios-card-bg); border-radius: 14px; margin-bottom: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
-        .settings-row { padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 0.5px solid var(--ios-border); }
+        /* ── SUMMARY CARD ── */
+        .summary-card { background: linear-gradient(135deg, #E8F5E9, #F1F8E9); border-radius: 16px; padding: 16px; margin-bottom: 14px; border: 1px solid #C8E6C9; }
+        [data-theme="dark"] .summary-card { background: linear-gradient(135deg, #1B3B1F, #1F2D15); border-color: #2E5023; }
+        .summary-row { display: flex; gap: 12px; }
+        .summary-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        .summary-num { font-size: 24px; font-weight: 800; color: var(--green); }
+        .summary-lbl { font-size: 11px; color: var(--text-sec); font-weight: 500; text-align: center; }
+
+        /* ── SETTINGS ── */
+        .settings-group { background: var(--card); border-radius: 14px; margin-bottom: 14px; overflow: hidden; box-shadow: 0 1px 3px var(--shadow); }
+        .settings-row { padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 0.5px solid var(--border); }
         .settings-row:last-child { border-bottom: none; }
         .settings-label { font-size: 15px; font-weight: 500; }
-        .joint-code-input { border: 1px solid var(--ios-border); border-radius: 8px; padding: 6px 10px; font-size: 14px; text-align: center; text-transform: uppercase; width: 120px; font-weight: 600; color: var(--ios-blue); }
-        .btn-save { background: var(--ios-blue); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 600; cursor: pointer;}
-        .tab-bar { position: fixed; bottom: 0; width: 100%; max-width: 430px; background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 0.5px solid var(--ios-border); display: flex; height: 65px; padding-bottom: env(safe-area-inset-bottom); z-index: 200; }
-        .tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--ios-text-sec); font-size: 10px; font-weight: 500; cursor: pointer; gap: 3px; }
-        .tab-item.active { color: var(--ios-blue); }
-        .tab-icon { font-size: 19px; }
-        .empty-state { padding: 40px 16px; text-align: center; color: var(--ios-text-sec); font-size: 14px; }
+        .settings-value { font-size: 14px; color: var(--text-sec); }
+        .code-input { border: 1.5px solid var(--border); border-radius: 9px; padding: 7px 10px; font-size: 14px; text-align: center; text-transform: uppercase; width: 120px; font-weight: 600; color: var(--blue); background: var(--input-bg); color: var(--text); }
+        .btn-save { background: var(--blue); color: white; border: none; padding: 7px 14px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; }
+
+        /* ── TAB BAR ── */
+        .tab-bar { position: fixed; bottom: 0; width: 100%; max-width: 430px; background: var(--tab-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 0.5px solid var(--border); display: flex; height: 68px; padding-bottom: env(safe-area-inset-bottom); z-index: 200; }
+        .tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-sec); font-size: 10px; font-weight: 500; cursor: pointer; gap: 3px; transition: color 0.15s; }
+        .tab.active { color: var(--blue); }
+        .tab-icon { font-size: 20px; }
+        .tab-badge { background: var(--red); color: white; font-size: 9px; font-weight: 700; border-radius: 8px; padding: 1px 5px; position: absolute; top: -2px; right: -6px; }
+        .tab-icon-wrap { position: relative; display: inline-block; }
+
+        .empty-state { padding: 48px 16px; text-align: center; color: var(--text-sec); font-size: 14px; line-height: 1.6; }
+        .empty-icon { font-size: 40px; display: block; margin-bottom: 12px; }
     </style>
 </head>
 <body>
 
-    <div id="image-lightbox" class="lightbox-overlay" onclick="closeLightbox()">
-        <button class="lightbox-close-btn">✕</button>
-        <img id="lightbox-full-img" class="lightbox-img" src="">
-    </div>
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <button class="lightbox-close">✕</button>
+    <img id="lightbox-img" class="lightbox-img" src="">
+</div>
 
-    <div id="ai-scanner-overlay" class="ai-loading-overlay">
-        <div class="spinner"></div>
-        <div style="font-weight: 600; font-size: 15px; color: var(--ios-blue);">🤖 Yapay Zeka Tarama Yapıyor...</div>
-        <div style="font-size: 12px; color: var(--ios-text-sec); text-align:center; padding: 0 32px;">Görsel analiz ediliyor, soru metni çözümleniyor ve dijital Hata Havuzunuza işleniyor.</div>
-    </div>
+<!-- AI Overlay -->
+<div class="ai-overlay" id="ai-overlay">
+    <div class="ai-spinner"></div>
+    <div class="ai-overlay-text">🤖 Soru Analiz Ediliyor...</div>
+    <div class="ai-overlay-sub">Görsel işleniyor ve konu tespiti yapılıyor.</div>
+</div>
 
-    <div class="app-container">
-        <header>
+<!-- Custom Modal -->
+<div class="modal-backdrop" id="modal" onclick="closeModal()">
+    <div class="modal-box" onclick="event.stopPropagation()">
+        <div class="modal-title" id="modal-title"></div>
+        <div class="modal-msg" id="modal-msg"></div>
+        <div class="modal-actions" id="modal-actions"></div>
+    </div>
+</div>
+
+<div class="app">
+    <header>
+        <div class="header-left">
             <h1 id="page-title">Bugün</h1>
-            <div id="sync-indicator" class="sync-status">Bağlanıyor...</div>
-        </header>
-
-        <div class="countdown-widget">
-            <div class="countdown-title">AGS '26 Geri Sayım</div>
-            <div class="countdown-days" id="countdown-display">Yükleniyor...</div>
+            <div class="header-progress" id="header-progress"></div>
         </div>
-
-        <div class="ai-box" id="ai-motivation-box">
-            <div class="ai-title">🧠 Yapay Zeka Asistanı</div>
-            <div class="ai-text" id="ai-motivation-text">Harika bir gün! Programı hazırladım, hedeflere odaklanalım.</div>
+        <div class="header-right">
+            <div class="sync-pill" id="sync-pill">Bağlanıyor...</div>
+            <button class="dark-toggle" id="dark-btn" onclick="toggleDark()">🌙</button>
         </div>
+    </header>
 
-        <div id="view-today" class="view active">
-            <div id="telafi-container"></div>
-            <div class="section-title">Bugünün Çalışma Planı</div>
-            <div id="today-tasks-list"></div>
-            <div id="extra-task-container"></div>
-            <div class="section-title" style="margin-top: 16px;">Tamamlananlar</div>
-            <div id="completed-tasks-list"></div>
+    <div class="countdown" id="countdown-widget">
+        <div class="countdown-left">
+            <div class="countdown-label">AGS '26 Geri Sayım</div>
+            <div class="countdown-days" id="cd-days">—</div>
         </div>
-
-        <div id="view-calendar" class="view">
-            <div class="section-title">Mayıs 2026</div>
-            <div class="calendar-grid" id="calendar-grid-container"></div>
-            <div class="section-title" style="margin-top: 20px;">Seçili Günün Programı</div>
-            <div id="selected-day-tasks">
-                <div class="empty-state">Takvimden bir gün seçerek detayları görebilirsiniz.</div>
+        <div class="countdown-right">
+            <div class="countdown-unit">
+                <div class="countdown-num" id="cd-hours">--</div>
+                <div class="countdown-unit-label">Saat</div>
+            </div>
+            <div class="countdown-unit">
+                <div class="countdown-num" id="cd-mins">--</div>
+                <div class="countdown-unit-label">Dakika</div>
             </div>
         </div>
-
-        <div id="view-stats" class="view">
-            <div class="section-title">Müfredat İlerleme Durumu</div>
-            <p style="font-size: 12px; color: var(--ios-text-sec); margin-bottom: 12px;">Dersleri açıp kapatmak için üzerlerine dokunun. Konuları buradan da direkt bitirebilirsiniz.</p>
-            <div id="curriculum-progress-container"></div>
-        </div>
-
-        <div id="view-hata" class="view">
-            <div class="section-title">Hatalı Soru Havuzu</div>
-            <button class="btn-hata-ekle" onclick="document.getElementById('camera-file-input').click()">
-                📸 Fotoğraf Çek / Galeriden Seç
-            </button>
-            <input type="file" id="camera-file-input" accept="image/*" style="display:none;" onchange="processCapturedQuestion(this)">
-            
-            <div id="hata-sorular-list">
-                <div class="empty-state">Henüz hatalı soru eklenmemiş. Yanlış çözdüğün soruları ekleyerek burada biriktirebilirsin! 🎯</div>
-            </div>
-        </div>
-
-        <div id="view-settings" class="view">
-            <div class="section-title">Eş Zamanlı Takip Kurulumu</div>
-            <div class="settings-group">
-                <div class="settings-row">
-                    <span class="settings-label">Ortak Aile Kodu</span>
-                    <input type="text" class="joint-code-input" id="joint-code-field">
-                </div>
-                <div class="settings-row">
-                    <button class="btn-save" onclick="updateJointCode()">Kodu Kaydet ve Bağlan</button>
-                </div>
-            </div>
-
-            <div class="section-title">Uygulama Bilgileri</div>
-            <div class="settings-group">
-                <div class="settings-row">
-                    <span class="settings-label">Hedef Sınav Tarihi</span>
-                    <!-- HEDEF TARİH GÜNCELLENDİ -->
-                    <span class="settings-label" style="color: var(--ios-text-sec);">26 Temmuz 2026</span>
-                </div>
-            </div>
-            
-            <button class="btn-reset" onclick="hardResetSchedule()">Takvimi Yeniden Oluştur (Sıfırla)</button>
-        </div>
-
-        <nav class="tab-bar">
-            <div class="tab-item active" onclick="switchTab('today', 'Bugün')">
-                <span class="tab-icon">📋</span>
-                <span>Bugün</span>
-            </div>
-            <div class="tab-item" onclick="switchTab('calendar', 'Takvim')">
-                <span class="tab-icon">📅</span>
-                <span>Takvim</span>
-            </div>
-            <div class="tab-item" onclick="switchTab('stats', 'İstatistik')">
-                <span class="tab-icon">📊</span>
-                <span>İlerleme</span>
-            </div>
-            <div class="tab-item" onclick="switchTab('hata', 'Hata Kutusu')">
-                <span class="tab-icon">❌</span>
-                <span>Hata Kutusu</span>
-            </div>
-            <div class="tab-item" onclick="switchTab('settings', 'Ayarlar')">
-                <span class="tab-icon">⚙️</span>
-                <span>Ayarlar</span>
-            </div>
-        </nav>
     </div>
 
-    <script>
-        // --- FIREBASE CONFIG ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyADpIRNLQEIer_gplTgwKi_EKkfcyrYoqY",
-            authDomain: "maasgunu-bd353.firebaseapp.com",
-            projectId: "maasgunu-bd353",
-            storageBucket: "maasgunu-bd353.firebasestorage.app",
-            messagingSenderId: "485904329467",
-            appId: "1:485904329467:web:579d932ae8f25958901e5e",
-            measurementId: "G-GQT1Q7FGDM"
-        };
-        
+    <div class="motivation-card" id="motivation-card">
+        <div class="motivation-icon">🧠</div>
+        <div class="motivation-text" id="motivation-text">Yükleniyor...</div>
+    </div>
+
+    <!-- Bugün -->
+    <div id="view-today" class="view active">
+        <div id="telafi-container"></div>
+        <div class="section-title">Bugünün Planı</div>
+        <div id="today-tasks"></div>
+        <div id="extra-btn-container"></div>
+        <div class="section-title" style="margin-top:14px; color: var(--green);">Tamamlananlar ✓</div>
+        <div id="completed-tasks"></div>
+    </div>
+
+    <!-- Takvim -->
+    <div id="view-calendar" class="view">
+        <div class="cal-nav">
+            <button class="cal-nav-btn" onclick="changeCalMonth(-1)">‹</button>
+            <div class="cal-title" id="cal-month-title"></div>
+            <button class="cal-nav-btn" onclick="changeCalMonth(1)">›</button>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+        <div class="section-title" style="margin-top:20px;">Seçili Günün Programı</div>
+        <div id="cal-day-tasks"></div>
+    </div>
+
+    <!-- İlerleme -->
+    <div id="view-stats" class="view">
+        <div id="stats-summary"></div>
+        <div class="section-title" style="margin-top:0;">Müfredat İlerlemesi</div>
+        <p style="font-size:12px; color:var(--text-sec); margin-bottom:12px;">Derslere dokunarak konuları görüntüleyin ve tamamlayın.</p>
+        <div id="curriculum-container"></div>
+    </div>
+
+    <!-- Hata Kutusu -->
+    <div id="view-hata" class="view">
+        <button class="btn-add-hata" onclick="document.getElementById('camera-input').click()">
+            📸 Fotoğraf Çek / Galeriden Seç
+        </button>
+        <input type="file" id="camera-input" accept="image/*" style="display:none" onchange="handlePhoto(this)">
+        <div id="hata-list">
+            <div class="empty-state">
+                <span class="empty-icon">🎯</span>
+                Yanlış çözdüğün soruları buraya ekle.<br>Yapay zeka konuyu tespit edecek!
+            </div>
+        </div>
+    </div>
+
+    <!-- Ayarlar -->
+    <div id="view-settings" class="view">
+        <div class="section-title">Eş Zamanlı Takip</div>
+        <div class="settings-group">
+            <div class="settings-row">
+                <span class="settings-label">Ortak Aile Kodu</span>
+                <input type="text" class="code-input" id="code-input" placeholder="EV-CZD26">
+            </div>
+            <div class="settings-row" style="justify-content:center;">
+                <button class="btn-save" onclick="saveJointCode()">Kodu Kaydet ve Bağlan</button>
+            </div>
+        </div>
+
+        <div class="section-title">Sınav Bilgileri</div>
+        <div class="settings-group">
+            <div class="settings-row">
+                <span class="settings-label">Hedef Sınav</span>
+                <span class="settings-value">AGS / ÖABT</span>
+            </div>
+            <div class="settings-row">
+                <span class="settings-label">Sınav Tarihi</span>
+                <span class="settings-value">26 Temmuz 2026</span>
+            </div>
+            <div class="settings-row">
+                <span class="settings-label">Toplam Konu</span>
+                <span class="settings-value" id="settings-total-topics"></span>
+            </div>
+        </div>
+
+        <div class="section-title">Tehlikeli Bölge</div>
+        <button class="btn-outline btn-red" onclick="confirmReset()">🔄 Takvimi Sıfırla</button>
+    </div>
+
+    <nav class="tab-bar">
+        <div class="tab active" id="tab-today" onclick="goTab('today','Bugün',this)">
+            <span class="tab-icon">📋</span>
+            <span>Bugün</span>
+        </div>
+        <div class="tab" id="tab-calendar" onclick="goTab('calendar','Takvim',this)">
+            <span class="tab-icon">📅</span>
+            <span>Takvim</span>
+        </div>
+        <div class="tab" id="tab-stats" onclick="goTab('stats','İlerleme',this)">
+            <span class="tab-icon">📊</span>
+            <span>İlerleme</span>
+        </div>
+        <div class="tab" id="tab-hata" onclick="goTab('hata','Hata Kutusu',this)">
+            <div class="tab-icon-wrap">
+                <span class="tab-icon">📌</span>
+                <span class="tab-badge" id="hata-badge" style="display:none">0</span>
+            </div>
+            <span>Hatalar</span>
+        </div>
+        <div class="tab" id="tab-settings" onclick="goTab('settings','Ayarlar',this)">
+            <span class="tab-icon">⚙️</span>
+            <span>Ayarlar</span>
+        </div>
+    </nav>
+</div>
+
+<script>
+// ─────────────────────────────────────────
+// FIREBASE — init after SDKs load
+// ─────────────────────────────────────────
+const firebaseConfig = {
+    apiKey: "AIzaSyADpIRNLQEIer_gplTgwKi_EKkfcyrYoqY",
+    authDomain: "maasgunu-bd353.firebaseapp.com",
+    projectId: "maasgunu-bd353",
+    storageBucket: "maasgunu-bd353.firebasestorage.app",
+    messagingSenderId: "485904329467",
+    appId: "1:485904329467:web:579d932ae8f25958901e5e"
+};
+let db = null;
+let unsubTasks = null, unsubHata = null;
+
+// ─────────────────────────────────────────
+// APP STATE
+// ─────────────────────────────────────────
+const APP_VERSION = "3.0";
+const TARGET_DATE = new Date(2026, 6, 26, 10, 0, 0); // 26 Temmuz 2026 10:00
+
+const ALL_TOPICS = [
+    { id: 1,  category: "AGS Sözel Yetenek",     title: "Sözcükte Anlam",                                          duration: "30 dk", questions: "15 Soru",  priority: "" },
+    { id: 2,  category: "AGS Sözel Yetenek",     title: "Cümlede Anlam",                                           duration: "35 dk", questions: "20 Soru",  priority: "" },
+    { id: 3,  category: "AGS Sözel Yetenek",     title: "Anlatımın Oluşması",                                      duration: "30 dk", questions: "15 Soru",  priority: "" },
+    { id: 4,  category: "AGS Sözel Yetenek",     title: "Paragrafta Anlam",                                        duration: "55 dk", questions: "35 Soru",  priority: "kritik" },
+    { id: 5,  category: "AGS Sözel Yetenek",     title: "Sözel Mantık",                                            duration: "50 dk", questions: "20 Soru",  priority: "kritik" },
+    { id: 6,  category: "AGS Sayısal Yetenek",   title: "Temel Matematik Kuralları",                               duration: "45 dk", questions: "15 Soru",  priority: "" },
+    { id: 7,  category: "AGS Sayısal Yetenek",   title: "Grafik ve Tablo Yorumlama",                               duration: "50 dk", questions: "25 Soru",  priority: "yuksek" },
+    { id: 8,  category: "AGS Sayısal Yetenek",   title: "Mantıksal Muhakeme Problemleri",                          duration: "50 dk", questions: "20 Soru",  priority: "" },
+    { id: 9,  category: "AGS Tarih",             title: "İslamiyet Öncesi Türk Tarihi",                            duration: "25 dk", questions: "15 Soru",  priority: "" },
+    { id: 10, category: "AGS Tarih",             title: "Türk İslam Devletleri",                                   duration: "30 dk", questions: "15 Soru",  priority: "" },
+    { id: 11, category: "AGS Tarih",             title: "Osmanlı Kuruluş Dönemi",                                  duration: "25 dk", questions: "10 Soru",  priority: "" },
+    { id: 12, category: "AGS Tarih",             title: "Osmanlı Yükselme Dönemi",                                 duration: "30 dk", questions: "15 Soru",  priority: "" },
+    { id: 13, category: "AGS Tarih",             title: "Osmanlı Duraklama Dönemi",                                duration: "25 dk", questions: "10 Soru",  priority: "" },
+    { id: 14, category: "AGS Tarih",             title: "Osmanlı Gerileme Dönemi",                                 duration: "25 dk", questions: "10 Soru",  priority: "" },
+    { id: 15, category: "AGS Tarih",             title: "Osmanlı Kültür ve Medeniyeti",                            duration: "65 dk", questions: "35 Soru",  priority: "kritik" },
+    { id: 16, category: "AGS Tarih",             title: "XX. Yüzyılda Osmanlı Devleti",                            duration: "40 dk", questions: "20 Soru",  priority: "" },
+    { id: 17, category: "AGS Tarih",             title: "Millî Mücadele Dönemi",                                   duration: "70 dk", questions: "40 Soru",  priority: "kritik" },
+    { id: 18, category: "AGS Tarih",             title: "Atatürk İlkeleri",                                        duration: "25 dk", questions: "15 Soru",  priority: "" },
+    { id: 19, category: "AGS Tarih",             title: "Atatürk Dönemi Türkiye Dış Politikası",                   duration: "30 dk", questions: "15 Soru",  priority: "" },
+    { id: 20, category: "AGS Tarih",             title: "Çağdaş Türk ve Dünya Tarihi",                             duration: "35 dk", questions: "15 Soru",  priority: "" },
+    { id: 21, category: "AGS Coğrafya",          title: "Türkiye'nin Coğrafi Konumu ve Jeopolitiği",               duration: "30 dk", questions: "15 Soru",  priority: "" },
+    { id: 22, category: "AGS Coğrafya",          title: "Türkiye'nin Jeolojik Geçmişi ve Yer Şekilleri",           duration: "50 dk", questions: "25 Soru",  priority: "yuksek" },
+    { id: 23, category: "AGS Coğrafya",          title: "Türkiye'de Dış Kuvvetler",                                duration: "35 dk", questions: "15 Soru",  priority: "" },
+    { id: 24, category: "AGS Coğrafya",          title: "Türkiye'nin Su Kaynakları, Toprak ve Bitki Örtüsü",       duration: "35 dk", questions: "15 Soru",  priority: "" },
+    { id: 25, category: "AGS Coğrafya",          title: "Türkiye'nin İklim Özellikleri ve Doğal Afetler",          duration: "35 dk", questions: "15 Soru",  priority: "" },
+    { id: 26, category: "AGS Coğrafya",          title: "Türkiye'de Nüfus, Yerleşme ve Göç",                       duration: "45 dk", questions: "25 Soru",  priority: "yuksek" },
+    { id: 27, category: "AGS Coğrafya",          title: "Türkiye'de Tarım ve Hayvancılık",                         duration: "35 dk", questions: "20 Soru",  priority: "" },
+    { id: 28, category: "AGS Coğrafya",          title: "Türkiye'de Madenler ve Enerji Kaynakları",                duration: "40 dk", questions: "20 Soru",  priority: "" },
+    { id: 29, category: "AGS Coğrafya",          title: "Türkiye'de Sanayi, Ulaşım, Turizm ve Ticaret",            duration: "55 dk", questions: "30 Soru",  priority: "yuksek" },
+    { id: 30, category: "AGS Coğrafya",          title: "Türkiye'de Bölge Sınıflandırması ve Kalkınma Projeleri",  duration: "30 dk", questions: "15 Soru",  priority: "" },
+    { id: 31, category: "AGS Mevzuat",           title: "T.C. Anayasası (2709 Sayılı Kanun)",                      duration: "55 dk", questions: "25 Soru",  priority: "yuksek" },
+    { id: 32, category: "AGS Mevzuat",           title: "1739 Sayılı Millî Eğitim Temel Kanunu",                   duration: "35 dk", questions: "15 Soru",  priority: "" },
+    { id: 33, category: "AGS Mevzuat",           title: "222 Sayılı İlköğretim ve Eğitim Kanunu",                  duration: "30 dk", questions: "15 Soru",  priority: "" },
+    { id: 34, category: "AGS Mevzuat",           title: "7528 Sayılı Öğretmenlik Mesleği Kanunu",                  duration: "30 dk", questions: "15 Soru",  priority: "" },
+    { id: 35, category: "Eğitimin Temelleri",    title: "Eğitim Biliminin Genel Kavramları ve Süreçleri",          duration: "35 dk", questions: "15 Soru",  priority: "" },
+    { id: 36, category: "Eğitimin Temelleri",    title: "Eğitimin Tarihi, Felsefi ve Toplumsal Temelleri",         duration: "40 dk", questions: "15 Soru",  priority: "" },
+    { id: 37, category: "Eğitimin Temelleri",    title: "Eğitimin Psikolojik, Ekonomik ve Politik Temelleri",      duration: "40 dk", questions: "15 Soru",  priority: "" },
+    { id: 38, category: "Eğitimin Temelleri",    title: "Türk Millî Eğitim Sisteminin Genel Yapısı",               duration: "35 dk", questions: "15 Soru",  priority: "" },
+    { id: 39, category: "Eğitimin Temelleri",    title: "Türkiye Yüzyılı Maarif Modeli Yapısı",                    duration: "55 dk", questions: "30 Soru",  priority: "kritik" },
+    { id: 40, category: "Eğitimin Temelleri",    title: "Eğitim ve Öğretimde Etik İlkeler",                        duration: "20 dk", questions: "10 Soru",  priority: "" },
+    { id: 41, category: "Eğitimin Temelleri",    title: "Eğitim ve Öğretim Teknolojileri",                         duration: "30 dk", questions: "15 Soru",  priority: "" },
+    { id: 42, category: "Eğitimin Temelleri",    title: "Öğrenmeyi Etkileyen Faktörler",                           duration: "40 dk", questions: "20 Soru",  priority: "" },
+    { id: 43, category: "Eğitimin Temelleri",    title: "Piaget'nin Bilişsel Gelişim Kuramı",                      duration: "55 dk", questions: "25 Soru",  priority: "kritik" },
+    { id: 44, category: "Eğitimin Temelleri",    title: "Öğrenme Kuramları ve Değerlendirme",                      duration: "50 dk", questions: "25 Soru",  priority: "yuksek" },
+    { id: 45, category: "Eğitimin Temelleri",    title: "Rehberlik ve Gelişim Psikolojisi Giriş",                  duration: "40 dk", questions: "15 Soru",  priority: "" },
+    { id: 46, category: "Eğitimin Temelleri",    title: "Sınıf Yönetimi ve Program Okuryazarlığı",                 duration: "35 dk", questions: "15 Soru",  priority: "" },
+    { id: 47, category: "Okul Öncesi ÖABT",      title: "Erken Çocukluk Eğitimine Giriş",                          duration: "45 dk", questions: "20 Soru",  priority: "" },
+    { id: 48, category: "Okul Öncesi ÖABT",      title: "Çocuk Sağlığı ve İlk Yardım",                             duration: "40 dk", questions: "20 Soru",  priority: "" },
+    { id: 49, category: "Okul Öncesi ÖABT",      title: "Erken Çocukluk Döneminde Gelişim",                        duration: "75 dk", questions: "40 Soru",  priority: "kritik" },
+    { id: 50, category: "Okul Öncesi ÖABT",      title: "Çocuk Ruh Sağlığı Yapısı",                                duration: "45 dk", questions: "25 Soru",  priority: "" },
+    { id: 51, category: "Okul Öncesi ÖABT",      title: "Erken Çocukluk Dönemi Edebiyatı",                         duration: "40 dk", questions: "20 Soru",  priority: "" },
+    { id: 52, category: "Okul Öncesi ÖABT",      title: "Erken Çocuklukta Program, Yöntem ve Yaklaşımlar",         duration: "75 dk", questions: "40 Soru",  priority: "kritik" },
+    { id: 53, category: "Okul Öncesi ÖABT",      title: "Anne-Baba Eğitimi Yaklaşımları",                          duration: "40 dk", questions: "20 Soru",  priority: "" },
+    { id: 54, category: "Okul Öncesi ÖABT",      title: "Çocuk Hakları ve Mevzuatı",                               duration: "30 dk", questions: "15 Soru",  priority: "" },
+    { id: 55, category: "Okul Öncesi ÖABT",      title: "Alan Eğitimi: Fen ve Matematik Eğitimi",                  duration: "65 dk", questions: "30 Soru",  priority: "yuksek" },
+    { id: 56, category: "Okul Öncesi ÖABT",      title: "Alan Eğitimi: Görsel Sanatlar ve Müzik Eğitimi",          duration: "45 dk", questions: "25 Soru",  priority: "" },
+    { id: 57, category: "Okul Öncesi ÖABT",      title: "Alan Eğitimi: Oyun ve Drama Eğitimi",                     duration: "65 dk", questions: "35 Soru",  priority: "yuksek" },
+    { id: 58, category: "Okul Öncesi ÖABT",      title: "Alan Eğitimi: Öğrenme Yaklaşımları ve Okula Uyum",        duration: "45 dk", questions: "25 Soru",  priority: "" },
+    { id: 59, category: "Okul Öncesi ÖABT",      title: "Alan Eğitimi: Erken Okuryazarlık Eğitimi",               duration: "50 dk", questions: "25 Soru",  priority: "" }
+];
+
+let schedule = {};
+let completedIds = [];
+let jointCode = localStorage.getItem("ags_joint_code") || "EV-CZD26";
+let calViewYear, calViewMonth;
+let hataCount = 0;
+
+// ─────────────────────────────────────────
+// DATE HELPERS
+// ─────────────────────────────────────────
+function getWorkingDate() {
+    const d = new Date();
+    if (d.getHours() < 3) d.setDate(d.getDate() - 1);
+    return d;
+}
+function dateStr(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ─────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────
+function initApp() {
+    // Firebase — SDK'lar bu noktada yüklenmiş olmalı
+    try {
         firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        let unsubscribeTasks = null; 
-        let unsubscribeHata = null;
+        db = firebase.firestore();
+    } catch(e) {
+        console.warn("Firebase init:", e.message);
+    }
 
-        // VERSİYON GÜNCELLENDİ: Tarih ve plan uyumu için 2.0
-        const APP_VERSION = "2.0";
+    // Dark mode
+    const dark = localStorage.getItem("ags_dark") === "1";
+    if (dark) { document.documentElement.setAttribute("data-theme","dark"); document.getElementById("dark-btn").textContent = "☀️"; }
 
-        const ALL_TOPICS = [
-            { id: 1, category: "AGS Sözel Yetenek", title: "Sözcükte Anlam", duration: "30 dk", questions: "15 Soru" },
-            { id: 2, category: "AGS Sözel Yetenek", title: "Cümlede Anlam", duration: "35 dk", questions: "20 Soru" },
-            { id: 3, category: "AGS Sözel Yetenek", title: "Anlatımın Oluşması", duration: "30 dk", questions: "15 Soru" },
-            { id: 4, category: "AGS Sözel Yetenek", title: "Paragrafta Anlam [Kritik Önem]", duration: "55 dk", questions: "35 Soru" },
-            { id: 5, category: "AGS Sözel Yetenek", title: "Sözel Mantık [Kritik Önem]", duration: "50 dk", questions: "20 Soru" },
-            { id: 6, category: "AGS Sayısal Yetenek", title: "Temel Matematik Kuralları", duration: "45 dk", questions: "15 Soru" },
-            { id: 7, category: "AGS Sayısal Yetenek", title: "Grafik ve Tablo Yorumlama [Yüksek Önem]", duration: "50 dk", questions: "25 Soru" },
-            { id: 8, category: "AGS Sayısal Yetenek", title: "Mantıksal Muhakeme Problemleri", duration: "50 dk", questions: "20 Soru" },
-            { id: 9, category: "AGS Tarih", title: "İslamiyet Öncesi Türk Tarihi", duration: "25 dk", questions: "15 Soru" },
-            { id: 10, category: "AGS Tarih", title: "Türk İslam Devletleri", duration: "30 dk", questions: "15 Soru" },
-            { id: 11, category: "AGS Tarih", title: "Osmanlı Kuruluş Dönemi", duration: "25 dk", questions: "10 Soru" },
-            { id: 12, category: "AGS Tarih", title: "Osmanlı Yükselme Dönemi", duration: "30 dk", questions: "15 Soru" },
-            { id: 13, category: "AGS Tarih", title: "Osmanlı Duraklama Dönemi", duration: "25 dk", questions: "10 Soru" },
-            { id: 14, category: "AGS Tarih", title: "Osmanlı Gerileme Dönemi", duration: "25 dk", questions: "10 Soru" },
-            { id: 15, category: "AGS Tarih", title: "Osmanlı Culture ve Medeniyeti [Çok Yüksek Önem]", duration: "65 dk", questions: "35 Soru" },
-            { id: 16, category: "AGS Tarih", title: "XX. Yüzyılda Osmanlı Devleti", duration: "40 dk", questions: "20 Soru" },
-            { id: 17, category: "AGS Tarih", title: "Milli Mücadele Dönemi [Çok Yüksek Önem]", duration: "70 dk", questions: "40 Soru" },
-            { id: 18, category: "AGS Tarih", title: "Atatürk İlkeleri", duration: "25 dk", questions: "15 Soru" },
-            { id: 19, category: "AGS Tarih", title: "Atatürk Dönemi Türkiye Dış Politikası", duration: "30 dk", questions: "15 Soru" },
-            { id: 20, category: "AGS Tarih", title: "Çağdaş Türk ve Dünya Tarihi", duration: "35 dk", questions: "15 Soru" },
-            { id: 21, category: "AGS Coğrafya", title: "Türkiye'nin Coğrafi Konumu ve Jeopolitiği", duration: "30 dk", questions: "15 Soru" },
-            { id: 22, category: "AGS Coğrafya", title: "Türkiye'nin Jeolojik Geçmişi ve Yer Şekilleri [Yüksek Önem]", duration: "50 dk", questions: "25 Soru" },
-            { id: 23, category: "AGS Coğrafya", title: "Türkiye'de Dış Kuvvetler", duration: "35 dk", questions: "15 Soru" },
-            { id: 24, category: "AGS Coğrafya", title: "Türkiye'nin Su Kaynakları, Toprak ve Bitki Örtüsü", duration: "35 dk", questions: "15 Soru" },
-            { id: 25, category: "AGS Coğrafya", title: "Türkiye'nin İklim Özellikleri ve Doğal Afetler", duration: "35 dk", questions: "15 Soru" },
-            { id: 26, category: "AGS Coğrafya", title: "Türkiye'de Nüfus, Yerleşme ve Göç [Yüksek Önem]", duration: "45 dk", questions: "25 Soru" },
-            { id: 27, category: "AGS Coğrafya", title: "Türkiye'de Tarım ve Hayvancılık", duration: "35 dk", questions: "20 Soru" },
-            { id: 28, category: "AGS Coğrafya", title: "Türkiye'de Madenler ve Enerji Kaynakları", duration: "40 dk", questions: "20 Soru" },
-            { id: 29, category: "AGS Coğrafya", title: "Türkiye'de Sanayi, Ulaşım, Turizm ve Ticaret [Yüksek Önem]", duration: "55 dk", questions: "30 Soru" },
-            { id: 30, category: "AGS Coğrafya", title: "Türkiye'de Bölge Sınıflandırması ve Kalkınma Projeleri", duration: "30 dk", questions: "15 Soru" },
-            { id: 31, category: "AGS Mevzuat", title: "T.C. Anayasası (2709 Sayılı Kanun) [Yüksek Önem]", duration: "55 dk", questions: "25 Soru" },
-            { id: 32, category: "AGS Mevzuat", title: "1739 Sayılı Milli Eğitim Temel Kanunu", duration: "35 dk", questions: "15 Soru" },
-            { id: 33, category: "AGS Mevzuat", title: "222 Sayılı İlköğretim ve Eğitim Kanunu", duration: "30 dk", questions: "15 Soru" },
-            { id: 34, category: "AGS Mevzuat", title: "7528 Sayılı Öğretmenlik Mesleği Kanunu", duration: "30 dk", questions: "15 Soru" },
-            { id: 35, category: "Eğitimin Temelleri", title: "Eğitim Biliminin Genel Kavramları ve Süreçleri", duration: "35 dk", questions: "15 Soru" },
-            { id: 36, category: "Eğitimin Temelleri", title: "Eğitimin Tarihi, Felsefi ve Toplumsal Temelleri", duration: "40 dk", questions: "15 Soru" },
-            { id: 37, category: "Eğitimin Temelleri", title: "Eğitimin Psikolojik, Ekonomik ve Politik Temelleri", duration: "40 dk", questions: "15 Soru" },
-            { id: 38, category: "Eğitimin Temelleri", title: "Türk Milli Eğitim Sisteminin Genel Yapısı", duration: "35 dk", questions: "15 Soru" },
-            { id: 39, category: "Eğitimin Temelleri", title: "Türkiye Yüzyılı Maarif Modeli Yapısı [Yeni & Kritik]", duration: "55 dk", questions: "30 Soru" },
-            { id: 40, category: "Eğitimin Temelleri", title: "Eğitim ve Öğretimde Etik İlkeler", duration: "20 dk", questions: "10 Soru" },
-            { id: 41, category: "Eğitimin Temelleri", title: "Eğitim ve Öğretim Teknolojileri", duration: "30 dk", questions: "15 Soru" },
-            { id: 42, category: "Eğitimin Temelleri", title: "Öğrenmeyi Etkileyen Faktörler", duration: "40 dk", questions: "20 Soru" },
-            { id: 43, category: "Eğitimin Temelleri", title: "Piaget'nin Bilişsel Gelişim Kuramı [Kritik Önem]", duration: "55 dk", questions: "25 Soru" },
-            { id: 44, category: "Eğitimin Temelleri", title: "Öğrenme Kuramları ve Değerlendirme [Yüksek Önem]", duration: "50 dk", questions: "25 Soru" },
-            { id: 45, category: "Eğitimin Temelleri", title: "Rehberlik & Gelişim Psikolojisi Giriş", duration: "40 dk", questions: "15 Soru" },
-            { id: 46, category: "Eğitimin Temelleri", title: "Sınıf Yönetimi & Program Okuryazarlığı", duration: "35 dk", questions: "15 Soru" },
-            { id: 47, category: "Okul Öncesi ÖABT", title: "Erken Çocukluk Eğitimine Giriş", duration: "45 dk", questions: "20 Soru" },
-            { id: 48, category: "Okul Öncesi ÖABT", title: "Çocuk Sağlığı ve İlk Yardım", duration: "40 dk", questions: "20 Soru" },
-            { id: 49, category: "Okul Öncesi ÖABT", title: "Erken Çocukluk Döneminde Gelişim [Hayati Önem]", duration: "75 dk", questions: "40 Soru" },
-            { id: 50, category: "Okul Öncesi ÖABT", title: "Çocuk Ruh Sağlığı Yapısı", duration: "45 dk", questions: "25 Soru" },
-            { id: 51, category: "Okul Öncesi ÖABT", title: "Erken Çocukluk Dönemi Edebiyatı", duration: "40 dk", questions: "20 Soru" },
-            { id: 52, category: "Okul Öncesi ÖABT", title: "Erken Çocuklukta Program, Yöntem ve Yaklaşımlar [Hayati Önem]", duration: "75 dk", questions: "40 Soru" },
-            { id: 53, category: "Okul Öncesi ÖABT", title: "Anne-Baba Eğitimi Yaklaşımları", duration: "40 dk", questions: "20 Soru" },
-            { id: 54, category: "Okul Öncesi ÖABT", title: "Çocuk Hakları ve Mevzuatı", duration: "30 dk", questions: "15 Soru" },
-            { id: 55, category: "Okul Öncesi ÖABT", title: "Alan Eğitimi: Fen ve Matematik Eğitimi [Yüksek Önem]", duration: "65 dk", questions: "30 Soru" },
-            { id: 56, category: "Okul Öncesi ÖABT", title: "Alan Eğitimi: Görsel Sanatlar ve Müzik Eğitimi", duration: "45 dk", questions: "25 Soru" },
-            { id: 57, category: "Okul Öncesi ÖABT", title: "Alan Eğitimi: Oyun ve Drama Eğitimi [Yüksek Önem]", duration: "65 dk", questions: "35 Soru" },
-            { id: 58, category: "Okul Öncesi ÖABT", title: "Alan Eğitimi: Öğrenme Yaklaşımları ve Okula Uyum", duration: "45 dk", questions: "25 Soru" },
-            { id: 59, category: "Okul Öncesi ÖABT", title: "Alan Eğitimi: Erken Okuryazarlık Eğitimi", duration: "50 dk", questions: "25 Soru" }
-        ];
+    document.getElementById("code-input").value = jointCode;
+    document.getElementById("settings-total-topics").textContent = ALL_TOPICS.length + " konu";
 
-        // HEDEF TARİH GÜNCELLENDİ (26 Temmuz 2026)
-        const TARGET_DATE = new Date(2026, 6, 26); 
-        let appSchedule = {};
-        let completedTaskIds = [];
-        let jointCode = localStorage.getItem("ags_joint_code") || "EV-CZD26";
+    // Init calendar to today
+    const today = new Date();
+    calViewYear = today.getFullYear();
+    calViewMonth = today.getMonth();
 
-        function getWorkingDate() {
-            let d = new Date();
-            if (d.getHours() < 3) {
-                d.setDate(d.getDate() - 1);
-            }
-            return d;
-        }
+    // Version check
+    if (localStorage.getItem("ags_version") !== APP_VERSION) {
+        localStorage.removeItem("ags_schedule");
+        localStorage.setItem("ags_version", APP_VERSION);
+    }
+    const saved = localStorage.getItem("ags_schedule");
+    schedule = saved ? JSON.parse(saved) : generateSchedule();
 
-        function toLocalDateString(dateObj) {
-            const year = dateObj.getFullYear();
-            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-            const day = String(dateObj.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
+    startCountdown();
 
-        document.addEventListener("DOMContentLoaded", () => {
-            initCountdown();
-            document.getElementById("joint-code-field").value = jointCode;
-            
-            if(localStorage.getItem("ags_version") !== APP_VERSION) {
-                localStorage.removeItem("ags_schedule");
-                localStorage.setItem("ags_version", APP_VERSION);
-            }
+    if (db) {
+        listenFirebase();
+    } else {
+        document.getElementById("sync-pill").textContent = "Çevrimdışı";
+        refreshAll();
+    }
+}
 
-            const savedSchedule = localStorage.getItem("ags_schedule");
-            if (savedSchedule) {
-                appSchedule = JSON.parse(savedSchedule);
-            } else {
-                generateInitialSchedule();
-            }
+document.addEventListener("DOMContentLoaded", initApp);
 
-            listenToFirebase();
-            registerServiceWorker();
+// ─────────────────────────────────────────
+// COUNTDOWN
+// ─────────────────────────────────────────
+function startCountdown() {
+    function tick() {
+        const now = new Date();
+        const diff = TARGET_DATE - now;
+        if (diff <= 0) { document.getElementById("cd-days").textContent = "Sınav Günü!"; return; }
+        const days = Math.floor(diff / 86400000);
+        const hours = Math.floor((diff % 86400000) / 3600000);
+        const mins = Math.floor((diff % 3600000) / 60000);
+        document.getElementById("cd-days").textContent = `Son ${days} Gün`;
+        document.getElementById("cd-hours").textContent = String(hours).padStart(2,'0');
+        document.getElementById("cd-mins").textContent = String(mins).padStart(2,'0');
+    }
+    tick();
+    setInterval(tick, 60000);
+}
+
+// ─────────────────────────────────────────
+// FIREBASE
+// ─────────────────────────────────────────
+function listenFirebase() {
+    if (unsubTasks) unsubTasks();
+    if (unsubHata) unsubHata();
+
+    const pill = document.getElementById("sync-pill");
+    pill.textContent = "Bağlanıyor...";
+    pill.className = "sync-pill";
+
+    unsubTasks = db.collection("ags_tracker").doc(jointCode).onSnapshot(doc => {
+        completedIds = doc.exists ? (doc.data().completed || []) : [];
+        if (!doc.exists) db.collection("ags_tracker").doc(jointCode).set({ completed: [] });
+        pill.textContent = "Senkronize ✓";
+        pill.className = "sync-pill online";
+        refreshAll();
+    }, () => {
+        pill.textContent = "Bağlantı Hatası!";
+        pill.className = "sync-pill";
+    });
+
+    unsubHata = db.collection("ags_tracker").doc(jointCode)
+        .collection("hata_kutusu").orderBy("createdAt","desc")
+        .onSnapshot(snap => renderHataList(snap));
+}
+
+function toggleTask(id) {
+    if (completedIds.includes(id)) completedIds = completedIds.filter(x => x !== id);
+    else completedIds.push(id);
+    if (db) db.collection("ags_tracker").doc(jointCode).update({ completed: completedIds });
+    refreshAll();
+}
+
+// ─────────────────────────────────────────
+// SCHEDULE GENERATION
+// ─────────────────────────────────────────
+function generateSchedule() {
+    const s = {};
+    let start = new Date(2026, 4, 17); // 17 Mayıs 2026
+    const heavy = ALL_TOPICS.filter(t => t.category.includes("ÖABT") || t.category.includes("Eğitimin"));
+    const light  = ALL_TOPICS.filter(t => !t.category.includes("ÖABT") && !t.category.includes("Eğitimin"));
+    const merged = [];
+    while (heavy.length || light.length) {
+        if (heavy.length) merged.push(heavy.shift());
+        if (light.length) merged.push(light.shift());
+    }
+    let day = 0;
+    while (merged.length) {
+        const ds = dateStr(start);
+        s[ds] = [];
+        const count = (day % 12 === 0 && merged.length > 1) ? 2 : 1;
+        for (let i = 0; i < count; i++) if (merged.length) s[ds].push({ id: merged.shift().id });
+        start.setDate(start.getDate() + 1);
+        day++;
+    }
+    localStorage.setItem("ags_schedule", JSON.stringify(s));
+    return s;
+}
+
+// ─────────────────────────────────────────
+// REFRESH UI
+// ─────────────────────────────────────────
+function refreshAll() {
+    updateHeaderProgress();
+    updateMotivation();
+    renderToday();
+    renderCalendar();
+    renderStats();
+}
+
+function updateHeaderProgress() {
+    const pct = Math.round((completedIds.length / ALL_TOPICS.length) * 100);
+    document.getElementById("header-progress").textContent = `Toplam %${pct} tamamlandı · ${completedIds.length}/${ALL_TOPICS.length} konu`;
+}
+
+// ─────────────────────────────────────────
+// MOTIVATION
+// ─────────────────────────────────────────
+function updateMotivation() {
+    const pct = Math.round((completedIds.length / ALL_TOPICS.length) * 100);
+    const todayStr = dateStr(getWorkingDate());
+    const todayRefs = schedule[todayStr] || [];
+    const todayDone = todayRefs.filter(r => completedIds.includes(r.id)).length;
+    const todayTotal = todayRefs.length;
+
+    let msg;
+    if (pct === 0) msg = "<strong>Hazır mısın?</strong> İlk adım her zaman en önemlisi. Bugünün konusunu tamamla ve geri sayım başlasın! 💪";
+    else if (todayDone === todayTotal && todayTotal > 0) msg = `<strong>Bugünü bitirdin! 🎉</strong> Müfredatın %${pct}'ini geride bıraktın. Yarın için hazır olduğunu biliyorum.`;
+    else if (pct >= 75) msg = `<strong>Neredeyse bitti!</strong> %${pct}'in gerisinde, kritik son viraj. Her konun sınavda bir soru. Devam et! 🔥`;
+    else if (pct >= 50) msg = `<strong>Yarı yolun geçildi!</strong> %${pct} tamamlandı, ${todayTotal - todayDone} konu kaldı bugün. Momentumu koru.`;
+    else msg = `<strong>İlerliyorsun!</strong> %${pct} bitti. Bugün ${todayDone}/${todayTotal} konu tamamlandı. Her gün bir adım.`;
+
+    document.getElementById("motivation-text").innerHTML = msg;
+}
+
+// ─────────────────────────────────────────
+// TODAY VIEW
+// ─────────────────────────────────────────
+function renderToday() {
+    const todayStr = dateStr(getWorkingDate());
+    const todayList = document.getElementById("today-tasks");
+    const compList  = document.getElementById("completed-tasks");
+    const extraBtn  = document.getElementById("extra-btn-container");
+    const telafiEl  = document.getElementById("telafi-container");
+
+    todayList.innerHTML = compList.innerHTML = extraBtn.innerHTML = telafiEl.innerHTML = "";
+
+    // Check missed
+    let missed = 0;
+    Object.keys(schedule).forEach(ds => {
+        if (ds < todayStr) schedule[ds].forEach(r => { if (!completedIds.includes(r.id)) missed++; });
+    });
+    if (missed > 0) {
+        telafiEl.innerHTML = `
+            <div class="telafi-banner">
+                <div class="telafi-text">⚠️ Geçmiş günlerden <strong>${missed} tamamlanmamış konu</strong> var.</div>
+                <button class="btn-telafi" onclick="reschedule()">Planı Yeniden Dağıt</button>
+            </div>`;
+    }
+
+    const refs = schedule[todayStr] || [];
+    if (!refs.length) {
+        todayList.innerHTML = `<div class="empty-state"><span class="empty-icon">✨</span>Bugün için planlanan ders yok.<br>Dinlenebilirsin!</div>`;
+    } else {
+        refs.forEach(r => {
+            const t = ALL_TOPICS.find(x => x.id === r.id);
+            if (!t) return;
+            const done = completedIds.includes(r.id);
+            const html = taskCardHTML(t, done, false);
+            if (done) compList.insertAdjacentHTML('beforeend', html);
+            else todayList.insertAdjacentHTML('beforeend', html);
         });
+    }
 
-        function listenToFirebase() {
-            if (unsubscribeTasks) unsubscribeTasks();
-            if (unsubscribeHata) unsubscribeHata();
-            
-            const syncStatus = document.getElementById("sync-indicator");
-            syncStatus.innerText = "Bağlanıyor...";
-            syncStatus.className = "sync-status";
+    // Future tasks available?
+    const hasFuture = Object.keys(schedule).sort().some(ds => ds > todayStr && schedule[ds].some(r => !completedIds.includes(r.id)));
+    if (hasFuture) {
+        extraBtn.innerHTML = `<button class="btn-outline btn-green" onclick="pullFuture()">➕ Vaktim Var — Yeni Konu Ver</button>`;
+    }
+}
 
-            unsubscribeTasks = db.collection("ags_tracker").doc(jointCode).onSnapshot((doc) => {
-                if (doc.exists) {
-                    completedTaskIds = doc.data().completed || [];
-                } else {
-                    db.collection("ags_tracker").doc(jointCode).set({ completed: [] });
-                    completedTaskIds = [];
-                }
-                syncStatus.innerText = "Senkronize ✓";
-                syncStatus.className = "sync-status online";
-                refreshUI();
-            }, (error) => {
-                syncStatus.innerText = "Bağlantı Hatası!";
-            });
+function taskCardHTML(t, done, slim) {
+    const priorityBadge = t.priority === 'kritik'
+        ? `<span class="badge badge-red">Kritik</span>`
+        : t.priority === 'yuksek'
+            ? `<span class="badge badge-orange">Önemli</span>`
+            : '';
+    return `
+        <div class="task-card ${done ? 'completed' : ''}">
+            <label class="cb">
+                <input type="checkbox" ${done ? 'checked' : ''} onchange="toggleTask(${t.id})">
+                <div class="cb-ring"></div>
+            </label>
+            <div class="task-info">
+                <div class="task-cat">${t.category}</div>
+                <div class="task-title">${t.title}${priorityBadge}</div>
+                <div class="task-meta"><span>⏱ ${t.duration}</span><span>📝 ${t.questions}</span></div>
+            </div>
+        </div>`;
+}
 
-            unsubscribeHata = db.collection("ags_tracker").doc(jointCode).collection("hata_kutusu")
-                .orderBy("createdAt", "desc").onSnapshot((snapshot) => {
-                    renderHataList(snapshot);
-                });
-        }
-
-        function toggleTask(id) {
-            if (completedTaskIds.includes(id)) {
-                completedTaskIds = completedTaskIds.filter(tid => tid !== id);
-            } else {
-                completedTaskIds.push(id);
-            }
-            db.collection("ags_tracker").doc(jointCode).update({ completed: completedTaskIds });
-            refreshUI();
-        }
-
-        function updateJointCode() {
-            const newCode = document.getElementById("joint-code-field").value.toUpperCase();
-            if(newCode) {
-                jointCode = newCode;
-                localStorage.setItem("ags_joint_code", jointCode);
-                listenToFirebase();
-                alert(`Aile kodu "${jointCode}" olarak güncellendi ve bağlandı.`);
-            }
-        }
-
-        function hardResetSchedule() {
-            localStorage.removeItem("ags_schedule");
-            generateInitialSchedule();
-            refreshUI();
-            alert("Takvim akıllı süre yapılandırmasıyla başarıyla sıfırlandı!");
-        }
-
-        function refreshUI() {
-            renderTodayTasks();
-            renderCurriculumProgress();
-            buildCalendar();
-            updateAIMotivation();
-            
-            const selectedCell = document.querySelector('.calendar-day-cell.selected');
-            if(selectedCell && selectedCell.dataset.date) {
-                renderSelectedDayTasks(selectedCell.dataset.date);
-            }
-        }
-
-        function initCountdown() {
-            const today = new Date();
-            const timeDiff = TARGET_DATE - today;
-            const daysLeft = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
-            document.getElementById("countdown-display").innerText = `Son ${daysLeft} Gün`;
-        }
-
-        function generateInitialSchedule() {
-            let startDate = new Date(2026, 4, 17); 
-            let agirKonular = ALL_TOPICS.filter(t => t.category.includes("ÖABT") || t.category.includes("Eğitimin"));
-            let hafifKonular = ALL_TOPICS.filter(t => !t.category.includes("ÖABT") && !t.category.includes("Eğitimin"));
-            let harmanlanmisListe = [];
-            while(agirKonular.length > 0 || hafifKonular.length > 0) {
-                if(agirKonular.length > 0) harmanlanmisListe.push(agirKonular.shift());
-                if(hafifKonular.length > 0) harmanlanmisListe.push(hafifKonular.shift());
-            }
-
-            let dayCounter = 0;
-            while(harmanlanmisListe.length > 0) {
-                let currentDateStr = toLocalDateString(startDate);
-                appSchedule[currentDateStr] = [];
-                let pullCount = (dayCounter % 12 === 0 && harmanlanmisListe.length > 1) ? 2 : 1;
-                for(let i=0; i<pullCount; i++) {
-                    if(harmanlanmisListe.length > 0) appSchedule[currentDateStr].push({ id: harmanlanmisListe.shift().id });
-                }
-                startDate.setDate(startDate.getDate() + 1);
-                dayCounter++;
-            }
-            localStorage.setItem("ags_schedule", JSON.stringify(appSchedule));
-        }
-
-        function renderTodayTasks() {
-            const todayStr = toLocalDateString(getWorkingDate()); 
-            const todayList = document.getElementById("today-tasks-list");
-            const completedList = document.getElementById("completed-tasks-list");
-            const extraContainer = document.getElementById("extra-task-container");
-            
-            todayList.innerHTML = ""; completedList.innerHTML = ""; extraContainer.innerHTML = "";
-
-            checkMissedDays(todayStr);
-            const todaysTaskRefs = appSchedule[todayStr] || [];
-
-            if(todaysTaskRefs.length === 0) {
-                todayList.innerHTML = `<div class="empty-state">Bugün için planlanan ders yok. Dinlenebilirsiniz! ✨</div>`;
-            } else {
-                todaysTaskRefs.forEach(ref => {
-                    const topicDetails = ALL_TOPICS.find(t => t.id === ref.id);
-                    if (!topicDetails) return;
-                    const isCompleted = completedTaskIds.includes(ref.id);
-                    const cardHTML = `
-                        <div class="task-card ${isCompleted ? 'completed' : ''}">
-                            <label class="checkbox-container">
-                                <input type="checkbox" ${isCompleted ? 'checked' : ''} onchange="toggleTask(${ref.id})">
-                                <span class="checkmark"></span>
-                            </label>
-                            <div class="task-details">
-                                <div class="task-category">${topicDetails.category}</div>
-                                <div class="task-title">${topicDetails.title}</div>
-                                <div class="task-meta"><span>⏱️ ${topicDetails.duration}</span><span>🎯 ${topicDetails.questions}</span></div>
-                            </div>
-                        </div>`;
-                    if(isCompleted) completedList.insertAdjacentHTML('beforeend', cardHTML);
-                    else todayList.insertAdjacentHTML('beforeend', cardHTML);
-                });
-            }
-
-            let hasFutureTasks = false;
-            const sortedDates = Object.keys(appSchedule).sort();
-            for(let d of sortedDates) {
-                if(d > todayStr && appSchedule[d].some(ref => !completedTaskIds.includes(ref.id))) {
-                    hasFutureTasks = true;
-                    break;
+function pullFuture() {
+    const todayStr = dateStr(getWorkingDate());
+    for (const ds of Object.keys(schedule).sort()) {
+        if (ds > todayStr) {
+            for (let i = 0; i < schedule[ds].length; i++) {
+                const r = schedule[ds][i];
+                if (!completedIds.includes(r.id)) {
+                    schedule[ds].splice(i, 1);
+                    if (!schedule[todayStr]) schedule[todayStr] = [];
+                    schedule[todayStr].push(r);
+                    localStorage.setItem("ags_schedule", JSON.stringify(schedule));
+                    refreshAll();
+                    return;
                 }
             }
-
-            if(hasFutureTasks) {
-                extraContainer.innerHTML = `<button class="btn-extra" onclick="pullFutureTaskToToday()">➕ Vaktim Var, Yeni Konu Ver (Öne Çek)</button>`;
-            }
         }
+    }
+}
 
-        function pullFutureTaskToToday() {
-            const todayStr = toLocalDateString(getWorkingDate());
-            let foundTask = null;
-            const sortedDates = Object.keys(appSchedule).sort();
-            for (let date of sortedDates) {
-                if (date > todayStr) {
-                    const tasksOnDate = appSchedule[date];
-                    for (let i = 0; i < tasksOnDate.length; i++) {
-                        const t = tasksOnDate[i];
-                        if (!completedTaskIds.includes(t.id)) {
-                            foundTask = t;
-                            tasksOnDate.splice(i, 1); 
-                            break;
-                        }
-                    }
-                    if (foundTask) break;
-                }
-            }
-            if (foundTask) {
-                if (!appSchedule[todayStr]) appSchedule[todayStr] = [];
-                appSchedule[todayStr].push(foundTask); 
-                localStorage.setItem("ags_schedule", JSON.stringify(appSchedule));
-                refreshUI();
-            }
-        }
-
-        function checkMissedDays(todayStr) {
-            const telafiContainer = document.getElementById("telafi-container");
-            telafiContainer.innerHTML = "";
-            let missedCount = 0;
-            Object.keys(appSchedule).forEach(dateStr => {
-                if(dateStr < todayStr) {
-                    appSchedule[dateStr].forEach(ref => { if(!completedTaskIds.includes(ref.id)) missedCount++; });
-                }
-            });
-            if(missedCount > 0) {
-                telafiContainer.innerHTML = `
-                    <div class="telafi-banner">
-                        <div class="telafi-text">⚠️ Geçmiş günlerden tamamlanmamış ${missedCount} konu var! Planı yeniden dağıtalım.</div>
-                        <button class="btn-telafi" onclick="triggerReschedule()">Planı Yeniden Dağıt</button>
-                    </div>`;
-            }
-        }
-
-        function triggerReschedule() {
-            const todayStr = toLocalDateString(getWorkingDate());
-            let uncompletedRefs = [];
-            Object.keys(appSchedule).forEach(dateStr => {
-                if(dateStr < todayStr) {
-                    appSchedule[dateStr] = appSchedule[dateStr].filter(ref => {
-                        if(!completedTaskIds.includes(ref.id)) { uncompletedRefs.push(ref); return false; }
-                        return true;
-                    });
-                }
-            });
-            let tomorrow = getWorkingDate();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            while(uncompletedRefs.length > 0) {
-                let futureDateStr = toLocalDateString(tomorrow);
-                if(!appSchedule[futureDateStr]) appSchedule[futureDateStr] = [];
-                appSchedule[futureDateStr].push(uncompletedRefs.shift());
-                tomorrow.setDate(tomorrow.getDate() + 1);
-            }
-            localStorage.setItem("ags_schedule", JSON.stringify(appSchedule));
-            refreshUI();
-            alert("Geçmiş eksikler kalan günlere harmanlandı. Bugünün planı korundu!");
-        }
-
-        function renderCurriculumProgress() {
-            const container = document.getElementById("curriculum-progress-container");
-            container.innerHTML = "";
-            const categories = [...new Set(ALL_TOPICS.map(t => t.category))];
-            
-            categories.forEach((cat, index) => {
-                const catTopics = ALL_TOPICS.filter(t => t.category === cat);
-                const total = catTopics.length;
-                const completed = catTopics.filter(t => completedTaskIds.includes(t.id)).length;
-                const pct = Math.round((completed / total) * 100) || 0;
-
-                let topicListHTML = `<div class="topic-list" id="topic-list-${index}">`;
-                catTopics.forEach(t => {
-                    const isDone = completedTaskIds.includes(t.id);
-                    topicListHTML += `
-                        <div class="topic-item ${isDone ? 'completed' : ''}">
-                            <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
-                                <div style="display:flex; align-items:center; gap:10px;">
-                                    <label class="checkbox-container" style="margin-top:0;">
-                                        <input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleTask(${t.id})">
-                                        <span class="checkmark" style="width:18px; height:18px;"></span>
-                                    </label>
-                                    <span style="font-size:13px; margin-left:6px;">${t.title}</span>
-                                </div>
-                                <span style="font-size:11px; color:var(--ios-text-sec); margin-right:10px;">⏱️ ${t.duration}</span>
-                            </div>
-                        </div>`;
-                });
-                topicListHTML += `</div>`;
-
-                container.insertAdjacentHTML('beforeend', `
-                    <div class="category-row">
-                        <div class="category-header" onclick="toggleCategory(${index})">
-                            <div class="category-info">
-                                <span>${cat}</span>
-                                <div>
-                                    <span style="color: var(--ios-text-sec); margin-right: 8px;">${completed}/${total} (%${pct})</span>
-                                    <span class="chevron" id="chevron-${index}">▼</span>
-                                </div>
-                            </div>
-                            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${pct}%;"></div></div>
-                        </div>
-                        ${topicListHTML}
-                    </div>`);
+function reschedule() {
+    const todayStr = dateStr(getWorkingDate());
+    let pending = [];
+    Object.keys(schedule).forEach(ds => {
+        if (ds < todayStr) {
+            schedule[ds] = schedule[ds].filter(r => {
+                if (!completedIds.includes(r.id)) { pending.push(r); return false; }
+                return true;
             });
         }
+    });
+    let d = getWorkingDate();
+    d.setDate(d.getDate() + 1);
+    pending.forEach(r => {
+        const ds = dateStr(d);
+        if (!schedule[ds]) schedule[ds] = [];
+        schedule[ds].push(r);
+        d.setDate(d.getDate() + 1);
+    });
+    localStorage.setItem("ags_schedule", JSON.stringify(schedule));
+    refreshAll();
+    showModal("✅ Plan Güncellendi", `${pending.length} eksik konu kalan günlere dağıtıldı. Bugünün planı korundu.`, [{ label: "Tamam", cls: "modal-confirm" }]);
+}
 
-        function toggleCategory(index) {
-            document.getElementById(`topic-list-${index}`).classList.toggle('expanded');
-            document.getElementById(`chevron-${index}`).classList.toggle('open');
+// ─────────────────────────────────────────
+// CALENDAR VIEW
+// ─────────────────────────────────────────
+const TR_MONTHS = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+const WEEKDAYS = ["Pt","Sa","Ça","Pe","Cu","Ct","Pz"];
+
+function changeCalMonth(dir) {
+    calViewMonth += dir;
+    if (calViewMonth > 11) { calViewMonth = 0; calViewYear++; }
+    if (calViewMonth < 0)  { calViewMonth = 11; calViewYear--; }
+    renderCalendar();
+}
+
+function renderCalendar() {
+    document.getElementById("cal-month-title").textContent = `${TR_MONTHS[calViewMonth]} ${calViewYear}`;
+    const grid = document.getElementById("cal-grid");
+    grid.innerHTML = WEEKDAYS.map(w => `<div class="cal-head">${w}</div>`).join("");
+
+    const todayStr = dateStr(getWorkingDate());
+    let firstDay = new Date(calViewYear, calViewMonth, 1).getDay();
+    if (firstDay === 0) firstDay = 7;
+    for (let i = 1; i < firstDay; i++) grid.insertAdjacentHTML('beforeend', `<div></div>`);
+
+    const daysInMonth = new Date(calViewYear, calViewMonth + 1, 0).getDate();
+    const selectedCell = document.querySelector('.cal-day.selected');
+    const selectedDate = selectedCell ? selectedCell.dataset.date : todayStr;
+
+    for (let d = 1; d <= daysInMonth; d++) {
+        const ds = `${calViewYear}-${String(calViewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const tasks = schedule[ds] || [];
+        const isToday = ds === todayStr;
+        const isSelected = ds === selectedDate;
+        const isPast = ds < todayStr;
+        let dot = "";
+        if (tasks.length) {
+            const allDone = tasks.every(r => completedIds.includes(r.id));
+            dot = `<div class="cal-dot ${allDone ? 'green' : 'orange'} ${isSelected ? 'selected' : ''}"></div>`;
         }
+        grid.insertAdjacentHTML('beforeend',
+            `<div class="cal-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${isPast && !isToday ? 'past' : ''}"
+                  data-date="${ds}" onclick="selectCalDay('${ds}',this)">
+                ${d}${dot}
+             </div>`);
+    }
+    renderCalDayTasks(selectedDate);
+}
 
-        function processCapturedQuestion(input) {
-            if (input.files && input.files[0]) {
-                document.getElementById("ai-scanner-overlay").style.display = "flex"; 
-                
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = new Image();
-                    img.onload = function() {
-                        const canvas = document.createElement("canvas");
-                        const MAX_WIDTH = 600;
-                        const scale = MAX_WIDTH / img.width;
-                        canvas.width = MAX_WIDTH;
-                        canvas.height = img.height * scale;
-                        
-                        const ctx = canvas.getContext("2d");
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        
-                        const base64Image = canvas.toDataURL("image/jpeg", 0.7); 
-                        
-                        setTimeout(() => {
-                            db.collection("ags_tracker").doc(jointCode).collection("hata_kutusu").add({
-                                image: base64Image,
-                                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                                dateStr: toLocalDateString(getWorkingDate())
-                            }).then(() => {
-                                document.getElementById("ai-scanner-overlay").style.display = "none";
-                                input.value = ""; 
-                            });
-                        }, 2500);
-                    };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
+function selectCalDay(ds, el) {
+    document.querySelectorAll('.cal-day').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    // update dots
+    document.querySelectorAll('.cal-dot').forEach(dot => dot.classList.remove('selected'));
+    const dot = el.querySelector('.cal-dot');
+    if (dot) dot.classList.add('selected');
+    renderCalDayTasks(ds);
+}
 
-        function renderHataList(snapshot) {
-            const container = document.getElementById("hata-sorular-list");
-            if (snapshot.empty) {
-                container.innerHTML = `<div class="empty-state">Henüz hatalı soru eklenmemiş. Yanlış çözdüğün soruları ekleyerek burada biriktirebilirsin! 🎯</div>`;
-                return;
-            }
-            container.innerHTML = "";
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                container.insertAdjacentHTML('beforeend', `
-                    <div class="hata-card">
-                        <div class="hata-img-wrapper">
-                            <img src="${data.image}" class="hata-img" onclick="openLightbox(this.src)">
-                        </div>
-                        <div class="hata-content">
-                            <div class="hata-date">📅 Ekleme Tarihi: ${data.dateStr || ''}</div>
-                            <div class="hata-status-badge">⏳ Tekrar Çözülmeyi Bekliyor</div>
-                            <button class="btn-hata-sil" onclick="deleteHataQuestion('${doc.id}')">✓ Doğru Çözdüm (Havuzdan Kaldır)</button>
+function renderCalDayTasks(ds) {
+    const cont = document.getElementById("cal-day-tasks");
+    const refs = schedule[ds] || [];
+    if (!refs.length) { cont.innerHTML = `<div class="empty-state">Bu güne ait çalışma yok.</div>`; return; }
+    cont.innerHTML = "";
+    refs.forEach(r => {
+        const t = ALL_TOPICS.find(x => x.id === r.id);
+        if (t) cont.insertAdjacentHTML('beforeend', taskCardHTML(t, completedIds.includes(r.id), true));
+    });
+}
+
+// ─────────────────────────────────────────
+// STATS VIEW
+// ─────────────────────────────────────────
+function renderStats() {
+    // Summary card
+    const totalDone = completedIds.length;
+    const totalMins = ALL_TOPICS.filter(t => completedIds.includes(t.id)).reduce((acc, t) => {
+        const m = parseInt(t.duration) || 0; return acc + m;
+    }, 0);
+    const pct = Math.round((totalDone / ALL_TOPICS.length) * 100);
+    document.getElementById("stats-summary").innerHTML = `
+        <div class="summary-card">
+            <div class="summary-row">
+                <div class="summary-item">
+                    <div class="summary-num">${totalDone}</div>
+                    <div class="summary-lbl">Tamamlanan Konu</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-num">%${pct}</div>
+                    <div class="summary-lbl">Genel İlerleme</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-num">${Math.round(totalMins/60)}</div>
+                    <div class="summary-lbl">Toplam Saat</div>
+                </div>
+            </div>
+        </div>`;
+
+    const cont = document.getElementById("curriculum-container");
+    cont.innerHTML = "";
+    const cats = [...new Set(ALL_TOPICS.map(t => t.category))];
+    cats.forEach((cat, idx) => {
+        const topics = ALL_TOPICS.filter(t => t.category === cat);
+        const done = topics.filter(t => completedIds.includes(t.id)).length;
+        const pctCat = Math.round((done / topics.length) * 100);
+
+        let topicRows = topics.map(t => {
+            const isDone = completedIds.includes(t.id);
+            return `
+                <div class="topic-item ${isDone ? 'done' : ''}">
+                    <label class="cb" style="flex-shrink:0;">
+                        <input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleTask(${t.id})">
+                        <div class="cb-ring" style="width:18px;height:18px;"></div>
+                    </label>
+                    <span class="topic-title">${t.title}</span>
+                    <span class="topic-dur">⏱ ${t.duration}</span>
+                </div>`;
+        }).join("");
+
+        // Color progress bar
+        const barColor = pctCat === 100 ? 'var(--green)' : pctCat > 50 ? 'var(--blue)' : 'var(--orange)';
+
+        cont.insertAdjacentHTML('beforeend', `
+            <div class="cat-row">
+                <div class="cat-header" onclick="toggleCat(${idx})">
+                    <div class="cat-info">
+                        <span>${cat}</span>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span class="cat-pct">${done}/${topics.length}</span>
+                            <span class="chevron" id="ch-${idx}">▼</span>
                         </div>
                     </div>
-                `);
+                    <div class="progress-bg">
+                        <div class="progress-fill" style="width:${pctCat}%;background:${barColor};"></div>
+                    </div>
+                </div>
+                <div class="topic-list" id="tl-${idx}">${topicRows}</div>
+            </div>`);
+    });
+}
+
+function toggleCat(idx) {
+    document.getElementById(`tl-${idx}`).classList.toggle('open');
+    document.getElementById(`ch-${idx}`).classList.toggle('open');
+}
+
+// ─────────────────────────────────────────
+// HATA KUTUSU — AI Analysis via Claude
+// ─────────────────────────────────────────
+function handlePhoto(input) {
+    if (!input.files || !input.files[0]) return;
+    const overlay = document.getElementById("ai-overlay");
+    overlay.classList.add("active");
+
+    const reader = new FileReader();
+    reader.onload = async e => {
+        const img = new Image();
+        img.onload = async () => {
+            const canvas = document.createElement("canvas");
+            const maxW = 700;
+            const scale = Math.min(1, maxW / img.width);
+            canvas.width = img.width * scale;
+            canvas.height = img.height * scale;
+            canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+            const base64 = canvas.toDataURL("image/jpeg", 0.75);
+
+            // Call Claude API for analysis
+            let aiResult = null;
+            try {
+                aiResult = await analyzeWithClaude(base64.split(",")[1]);
+            } catch (err) {
+                aiResult = "Analiz yapılamadı. Soru manuel olarak incelenebilir.";
+            }
+
+            await db.collection("ags_tracker").doc(jointCode).collection("hata_kutusu").add({
+                image: base64,
+                aiAnalysis: aiResult,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                dateStr: dateStr(getWorkingDate())
             });
+
+            overlay.classList.remove("active");
+            input.value = "";
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(input.files[0]);
+}
+
+async function analyzeWithClaude(base64Data) {
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 1000,
+            system: `Sen AGS ve ÖABT sınavlarına hazırlanan bir öğretmen adayına yardım eden bir yapay zeka asistanısın. 
+Görev: Verilen sınav sorusu görselini analiz et ve aşağıdaki bilgileri çıkar.
+SADECE JSON döndür, başka hiçbir şey yazma:
+{
+  "konu": "Sorunun hangi konuya ait olduğu (1-2 cümle)",
+  "ders": "Hangi ders alanı (AGS Tarih / AGS Coğrafya / Okul Öncesi ÖABT vs.)",
+  "hata_nedeni": "Neden yanlış yapılmış olabilir (kısa tahmin)",
+  "tekrar_ipucu": "Bu konuyu pekiştirmek için kısa öneri"
+}`,
+            messages: [{
+                role: "user",
+                content: [
+                    {
+                        type: "image",
+                        source: { type: "base64", media_type: "image/jpeg", data: base64Data }
+                    },
+                    { type: "text", text: "Bu yanlış yapılan sınav sorusunu analiz et." }
+                ]
+            }]
+        })
+    });
+    const data = await resp.json();
+    const text = data.content.map(c => c.text || "").join("").replace(/```json|```/g,"").trim();
+    try {
+        return JSON.parse(text);
+    } catch {
+        return text;
+    }
+}
+
+function renderHataList(snapshot) {
+    const cont = document.getElementById("hata-list");
+    hataCount = snapshot.size;
+    const badge = document.getElementById("hata-badge");
+    if (hataCount > 0) { badge.textContent = hataCount; badge.style.display = "block"; }
+    else badge.style.display = "none";
+
+    if (snapshot.empty) {
+        cont.innerHTML = `<div class="empty-state"><span class="empty-icon">🎯</span>Yanlış çözdüğün soruları buraya ekle.<br>Yapay zeka konuyu tespit edecek!</div>`;
+        return;
+    }
+    cont.innerHTML = "";
+    snapshot.forEach(doc => {
+        const d = doc.data();
+        const ai = d.aiAnalysis;
+        let aiHTML = "";
+        if (ai && typeof ai === "object") {
+            aiHTML = `
+                <div class="hata-ai-result">
+                    <div class="ai-label">🤖 Yapay Zeka Analizi</div>
+                    <strong>${ai.ders || ""}</strong> — ${ai.konu || ""}<br>
+                    ${ai.hata_nedeni ? `<span style="color:var(--orange)">⚠️ ${ai.hata_nedeni}</span><br>` : ""}
+                    ${ai.tekrar_ipucu ? `<span style="color:var(--blue)">💡 ${ai.tekrar_ipucu}</span>` : ""}
+                </div>`;
+        } else if (typeof ai === "string" && ai) {
+            aiHTML = `<div class="hata-ai-result"><div class="ai-label">📝 Not</div>${ai}</div>`;
         }
 
-        function openLightbox(src) {
-            document.getElementById('lightbox-full-img').src = src;
-            document.getElementById('image-lightbox').style.display = 'flex';
-        }
+        cont.insertAdjacentHTML('beforeend', `
+            <div class="hata-card">
+                <div class="hata-img-wrap" onclick="openLightbox('${doc.id}')">
+                    <img class="hata-img" src="${d.image}" data-id="${doc.id}">
+                </div>
+                <div class="hata-body">
+                    <div class="hata-date">📅 ${d.dateStr || ""}</div>
+                    ${aiHTML}
+                    <button class="btn-hata-sil" onclick="deleteHata('${doc.id}')">✓ Doğru Çözdüm — Havuzdan Kaldır</button>
+                </div>
+            </div>`);
+    });
+}
 
-        function closeLightbox() {
-            document.getElementById('image-lightbox').style.display = 'none';
-            document.getElementById('lightbox-full-img').src = '';
-        }
+function deleteHata(id) {
+    showModal("Soruyu Kaldır", "Bu soruyu artık doğru çözebiliyorsan havuzdan kaldırılacak. Emin misin?", [
+        { label: "Evet, Kaldır", cls: "modal-confirm", action: () => db.collection("ags_tracker").doc(jointCode).collection("hata_kutusu").doc(id).delete() },
+        { label: "Vazgeç", cls: "modal-cancel" }
+    ]);
+}
 
-        function deleteHataQuestion(docId) {
-            if(confirm("Bu soruyu başarıyla çözdün mü? Havuzdan kaldırılacak.")) {
-                db.collection("ags_tracker").doc(jointCode).collection("hata_kutusu").doc(docId).delete();
-            }
-        }
+// ─────────────────────────────────────────
+// LIGHTBOX
+// ─────────────────────────────────────────
+function openLightbox(docId) {
+    const img = document.querySelector(`.hata-img[data-id="${docId}"]`);
+    if (!img) return;
+    document.getElementById("lightbox-img").src = img.src;
+    document.getElementById("lightbox").classList.add("active");
+}
+function closeLightbox() {
+    document.getElementById("lightbox").classList.remove("active");
+    document.getElementById("lightbox-img").src = "";
+}
 
-        function buildCalendar() {
-            const grid = document.getElementById("calendar-grid-container");
-            grid.innerHTML = "";
-            const weekdays = ["Pt", "Sa", "Ça", "Pe", "Cu", "Ct", "Pz"];
-            weekdays.forEach(w => grid.insertAdjacentHTML('beforeend', `<div class="calendar-header-cell">${w}</div>`));
+// ─────────────────────────────────────────
+// SETTINGS
+// ─────────────────────────────────────────
+function saveJointCode() {
+    const val = document.getElementById("code-input").value.trim().toUpperCase();
+    if (!val) return;
+    jointCode = val;
+    localStorage.setItem("ags_joint_code", jointCode);
+    listenFirebase();
+    showModal("✅ Bağlandı", `Aile kodu "${jointCode}" olarak güncellendi ve bağlantı yenilendi.`, [
+        { label: "Tamam", cls: "modal-confirm" }
+    ]);
+}
 
-            let year = 2026, month = 4;
-            let firstDayIndex = new Date(year, month, 1).getDay();
-            if (firstDayIndex === 0) firstDayIndex = 7;
-            for(let i = 1; i < firstDayIndex; i++) grid.insertAdjacentHTML('beforeend', `<div class="calendar-day-cell"></div>`);
+function confirmReset() {
+    showModal("⚠️ Takvimi Sıfırla", "Tüm plan sıfırlanacak ve yeniden oluşturulacak. Tamamlanan konular etkilenmez. Devam et?", [
+        { label: "Sıfırla", cls: "modal-confirm danger", action: doReset },
+        { label: "Vazgeç", cls: "modal-cancel" }
+    ]);
+}
+function doReset() {
+    localStorage.removeItem("ags_schedule");
+    schedule = generateSchedule();
+    refreshAll();
+}
 
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const todayStr = toLocalDateString(getWorkingDate());
+// ─────────────────────────────────────────
+// CUSTOM MODAL
+// ─────────────────────────────────────────
+let _modalCallback = null;
+function showModal(title, msg, buttons) {
+    document.getElementById("modal-title").textContent = title;
+    document.getElementById("modal-msg").textContent = msg;
+    const acts = document.getElementById("modal-actions");
+    acts.innerHTML = "";
+    buttons.forEach(b => {
+        const btn = document.createElement("button");
+        btn.className = `modal-btn ${b.cls}`;
+        btn.textContent = b.label;
+        btn.onclick = () => {
+            closeModal();
+            if (b.action) b.action();
+        };
+        acts.appendChild(btn);
+    });
+    document.getElementById("modal").classList.add("active");
+}
+function closeModal() {
+    document.getElementById("modal").classList.remove("active");
+}
 
-            for(let day = 1; day <= daysInMonth; day++) {
-                let currentStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                let tasks = appSchedule[currentStr] || [];
-                let dotClass = "";
-                if(tasks.length > 0) {
-                    let allDone = tasks.every(ref => completedTaskIds.includes(ref.id));
-                    dotClass = allDone ? "dot-green" : "dot-orange";
-                }
-                
-                const isSelected = (currentStr === todayStr);
-                grid.insertAdjacentHTML('beforeend', `
-                    <div class="calendar-day-cell ${isSelected ? 'selected' : ''}" data-date="${currentStr}" onclick="showDayDetails('${currentStr}', this)">
-                        ${day} ${dotClass ? `<div class="calendar-dot ${dotClass}"></div>` : ''}
-                    </div>`);
-            }
-            renderSelectedDayTasks(todayStr);
-        }
+// ─────────────────────────────────────────
+// DARK MODE
+// ─────────────────────────────────────────
+function toggleDark() {
+    const dark = document.documentElement.getAttribute("data-theme") === "dark";
+    document.documentElement.setAttribute("data-theme", dark ? "light" : "dark");
+    document.getElementById("dark-btn").textContent = dark ? "🌙" : "☀️";
+    localStorage.setItem("ags_dark", dark ? "0" : "1");
+}
 
-        function showDayDetails(dateStr, element) {
-            document.querySelectorAll('.calendar-day-cell').forEach(el => el.classList.remove('selected'));
-            element.classList.add('selected');
-            renderSelectedDayTasks(dateStr);
-        }
+// ─────────────────────────────────────────
+// TAB NAVIGATION
+// ─────────────────────────────────────────
+function goTab(id, title, el) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(`view-${id}`).classList.add('active');
+    document.getElementById('page-title').textContent = title;
+    el.classList.add('active');
 
-        function renderSelectedDayTasks(dateStr) {
-            const container = document.getElementById("selected-day-tasks");
-            const dayTasks = appSchedule[dateStr] || [];
-            if(dayTasks.length === 0) {
-                container.innerHTML = `<div class="empty-state">Bu güne ait çalışma bulunmuyor.</div>`; return;
-            }
-            container.innerHTML = "";
-            dayTasks.forEach(ref => {
-                const topicDetails = ALL_TOPICS.find(t => t.id === ref.id);
-                const isCompleted = completedTaskIds.includes(ref.id);
-                container.insertAdjacentHTML('beforeend', `
-                    <div class="task-card ${isCompleted ? 'completed' : ''}" style="box-shadow: none; border: 1px solid var(--ios-border);">
-                        <label class="checkbox-container">
-                            <input type="checkbox" ${isCompleted ? 'checked' : ''} onchange="toggleTask(${ref.id})">
-                            <span class="checkmark"></span>
-                        </label>
-                        <div class="task-details">
-                            <div class="task-category">${topicDetails.category}</div>
-                            <div class="task-title">${topicDetails.title}</div>
-                            <div class="task-meta">⏱️ ${topicDetails.duration} | 🎯 ${topicDetails.questions}</div>
-                        </div>
-                    </div>`);
-            });
-        }
+    // Trigger re-render for calendar/stats on switch
+    if (id === 'calendar') renderCalendar();
+    if (id === 'stats') renderStats();
+}
 
-        function updateAIMotivation() {
-            const msgBox = document.getElementById("ai-motivation-text");
-            const pct = Math.round((completedTaskIds.length / ALL_TOPICS.length) * 100);
-            if(pct === 0) msgBox.innerText = "Yolculuk ilk adımla başlar! Bugünün konularını tamamlayarak harika bir başlangıç yapabilirsin.";
-            else msgBox.innerText = `Harika! Müfredatın %${pct}'ini tamamladın. Eş zamanlı takip aktif, disipline devam!`;
-        }
+// Service Worker
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
 
-        function switchTab(tabId, title) {
-            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-            document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-            document.getElementById(`view-${tabId}`).classList.add('active');
-            document.getElementById('page-title').innerText = title;
-            event.currentTarget.classList.add('active');
-        }
-
-        function registerServiceWorker() {
-            if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
-        }
-    </script>
 </body>
 </html>
